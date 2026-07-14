@@ -1,5 +1,6 @@
 Vagrant.configure("2") do |config|
-    config.vm.box = "ubuntu/noble64"
+    config.vm.box = "cloud-image/debian-13"
+    config.vm.box_version = "20260712.2537.0"
 
 #============================FIRST VM==============================
     config.vm.define "noleclerS" do |server|
