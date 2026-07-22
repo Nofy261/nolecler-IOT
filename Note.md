@@ -138,6 +138,50 @@ La preuve finale : kubectl get nodes -o wide lancé depuis le chef doit montrer 
 
 ----------------------------------------------------------------------------------------
 
+TEST POUR P1:
+
+vagrant up
+→ vérifie que les deux VMs se créent et démarrent sans erreur.
+
+vagrant ssh noleclerS
+vagrant ssh noleclerSW
+→ vérifie la connexion SSH sans mot de passe sur les deux machines.
+
+vagrant ssh noleclerS -c "hostname"
+vagrant ssh noleclerSW -c "hostname"
+→ vérifie que les hostnames sont bien noleclerS et noleclerSW.
+
+vagrant ssh noleclerS -c "ip a"
+vagrant ssh noleclerSW -c "ip a"
+→ vérifie que les IP dédiées 192.168.56.110 et 192.168.56.111 sont bien assignées.
+
+vagrant ssh noleclerS -c "nproc; free -h"
+→ vérifie que les ressources (1 CPU / 1024MB) sont bien appliquées.
+
+vagrant ssh noleclerS -c "sudo systemctl status k3s"
+→ vérifie que K3s tourne en mode serveur sur la première VM.
+
+vagrant ssh noleclerSW -c "sudo systemctl status k3s-agent"  (--no-pager)
+→ vérifie que K3s tourne en mode agent sur la deuxième VM.
+
+
+--> Se connecter au serveur vagrant ssh noleclerS puis kubectl get nodes -o wide 
+vagrant ssh noleclerS -c "kubectl get nodes -o wide"
+→ le test le plus important : vérifie que les deux nœuds apparaissent bien ensemble et en Ready, preuve que le cluster est formé (server + worker liés).
+
+vagrant ssh noleclerS -c "kubectl get nodes"
+(sans sudo devant, en te connectant normalement avec vagrant ssh noleclerS puis en tapant kubectl get nodes toi-même)
+→ vérifie que kubectl fonctionne pour l'utilisateur vagrant sans besoin de sudo.
+
+------------
+
+Config:
+dasn la premiere vm apres : vagrant ssh noleclerS 
+Fait : echo 'export KUBECONFIG=/home/vagrant/.kube/config' >> ~/.bashrc
+Puis: source ~/.bashrc
+
+--------------------------------------------------
+
     PARTIE 2
 
 En mots simples : tu n'as plus besoin de deux VM ici — une seule suffit, avec K3s installé en mode serveur (comme le chef de la Partie 1). Mais cette fois, l'objectif n'est plus de connecter des machines entre elles : c'est de faire tourner PLUSIEURS sites web différents sur cette même VM, et d'apprendre à afficher le bon site selon le nom que tu tapes dans ton navigateur.
@@ -231,3 +275,4 @@ vagrant ssh noleclerS -c "sudo systemctl status k3s --no-pager"
 vagrant ssh noleclerSW -c "sudo systemctl status k3s-agent --no-pager"
 
 vagrant ssh noleclerS puis kubectl get nodes -o wide
+
