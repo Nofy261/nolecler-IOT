@@ -218,3 +218,16 @@ Ingress → "l'aiguilleur" qui reçoit toutes les requêtes et les redirige vers
 Host → le nom (ex: app1.com) tapé/envoyé dans la requête, qui permet de distinguer plusieurs sites même s'ils partagent la même IP.
 
 En résumé : la Partie 1 = notions d'infrastructure (créer des machines, les relier). La Partie 2 = notions Kubernetes pures (comment on décrit et route des applications à l'intérieur d'un cluster déjà existant).
+--------------------
+
+vagrant up
+vagrant status
+vagrant ssh noleclerS -c "hostname"
+vagrant ssh noleclerSW -c "hostname"
+vagrant ssh noleclerS -c "ip a"
+vagrant ssh noleclerSW -c "ip a"
+vagrant ssh noleclerS -c "ls -la /vagrant"
+vagrant ssh noleclerS -c "sudo systemctl status k3s --no-pager"
+vagrant ssh noleclerSW -c "sudo systemctl status k3s-agent --no-pager"
+
+vagrant ssh noleclerS puis kubectl get nodes -o wide
