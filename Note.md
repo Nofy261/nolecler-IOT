@@ -143,17 +143,25 @@ TEST POUR P1:
 vagrant up
 → vérifie que les deux VMs se créent et démarrent sans erreur.
 
+
+vagrant up
+vagrant status
+vagrant ssh noleclerS -c "hostname"
+vagrant ssh noleclerSW -c "hostname"
+vagrant ssh noleclerS -c "ip a"
+vagrant ssh noleclerSW -c "ip a"
+vagrant ssh noleclerS -c "ls -la /vagrant"
+vagrant ssh noleclerS -c "sudo systemctl status k3s --no-pager"
+vagrant ssh noleclerSW -c "sudo systemctl status k3s-agent --no-pager"
+
+vagrant ssh noleclerS puis kubectl get nodes -o wide
+
+
+
 vagrant ssh noleclerS
 vagrant ssh noleclerSW
 → vérifie la connexion SSH sans mot de passe sur les deux machines.
 
-vagrant ssh noleclerS -c "hostname"
-vagrant ssh noleclerSW -c "hostname"
-→ vérifie que les hostnames sont bien noleclerS et noleclerSW.
-
-vagrant ssh noleclerS -c "ip a"
-vagrant ssh noleclerSW -c "ip a"
-→ vérifie que les IP dédiées 192.168.56.110 et 192.168.56.111 sont bien assignées.
 
 vagrant ssh noleclerS -c "nproc; free -h"
 → vérifie que les ressources (1 CPU / 1024MB) sont bien appliquées.
@@ -163,7 +171,6 @@ vagrant ssh noleclerS -c "sudo systemctl status k3s"
 
 vagrant ssh noleclerSW -c "sudo systemctl status k3s-agent"  (--no-pager)
 → vérifie que K3s tourne en mode agent sur la deuxième VM.
-
 
 --> Se connecter au serveur vagrant ssh noleclerS puis kubectl get nodes -o wide 
 vagrant ssh noleclerS -c "kubectl get nodes -o wide"
@@ -264,15 +271,38 @@ Host → le nom (ex: app1.com) tapé/envoyé dans la requête, qui permet de dis
 En résumé : la Partie 1 = notions d'infrastructure (créer des machines, les relier). La Partie 2 = notions Kubernetes pures (comment on décrit et route des applications à l'intérieur d'un cluster déjà existant).
 --------------------
 
-vagrant up
-vagrant status
-vagrant ssh noleclerS -c "hostname"
-vagrant ssh noleclerSW -c "hostname"
-vagrant ssh noleclerS -c "ip a"
-vagrant ssh noleclerSW -c "ip a"
-vagrant ssh noleclerS -c "ls -la /vagrant"
-vagrant ssh noleclerS -c "sudo systemctl status k3s --no-pager"
-vagrant ssh noleclerSW -c "sudo systemctl status k3s-agent --no-pager"
+curl/navigateur → Ingress (lit le Host) → Service (de la bonne appli) → Pod (de cette appli)
 
-vagrant ssh noleclerS puis kubectl get nodes -o wide
+Un Deployment (décrit l'appli à faire tourner)
+Un Service (donne une adresse stable pour la joindre)
 
+Requête (Host: app1.com)
+   → Ingress lit le Host de la requete
+      → redirige vers Service-app1 (et lui seul)
+         → Service-app1 choisit un Pod parmi ceux d'app1
+            → réponse : "Hello from app1"
+
+Requête (Host: app2.com) --> a 3 replicas donc 3 pods
+   → Ingress → Service-app2
+      → Service-app2 a 3 Pods disponibles, en choisit un (tour à tour)
+         → réponse : "Hello from app2" (peu importe lequel des 3 a répondu, le résultat est identique)
+
+--------
+
+En tout -> P2 -> 3 applis soit 5 pods car appli 2 = 3 replicas donc 3 pods
+
+"1 appli = autant de Pods que de réplicas précisés" (1 par défaut, ou plus si demandé).
+
+On teste avec curl -H "Host: appX.com" 192.168.56.110
+→ Ingress lit le Host → appelle le bon Service → Service choisit un Pod disponible → le Pod répond "Hello from appX"
+
+---------
+
+hashicorp/http-echo — une image publique conçue spécifiquement pour ce genre de cas : elle affiche juste le texte que tu lui donnes, sans bricolage de commande shell.
+
+
+image: hashicorp/http-echo
+args: ["-text=Hello from app1"]
+✅ La plus simple de toutes — pas de command/echo/&& à écrire, juste un argument direct
+✅ Image minuscule, démarre très vite
+❌ Moins connue que nginx (mais c'est un vrai outil largement utilisé pour exactement ce cas d'usage)
