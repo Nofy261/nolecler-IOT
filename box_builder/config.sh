@@ -17,4 +17,6 @@ DISK_SIZE=10240
 OUTPUT_DIR="./output"
 LOG_DIR="./logs"
 
-DISK_PATH="$HOME/VirtualBox VMs/$VM_NAME/$VM_NAME.vdi"
+CURRENT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+VM_BASE_DIR="${CURRENT_DIR}/vms"
