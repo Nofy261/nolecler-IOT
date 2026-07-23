@@ -332,6 +332,8 @@ Ingress = le "réceptionniste", qui lit le Host de la requête et route vers le 
 kubectl = l'outil en ligne de commande pour envoyer tes instructions (fichiers YAML) à K3s (kubectl apply -f ...)
 
 
+la notion clé ici est de montrer comment Kubernetes permet d'exposer plusieurs applications différentes derrière une seule adresse IP, en utilisant un système de routage intelligent (l'Ingress) basé sur le Host demandé, tout en gérant la résilience et la répartition de charge via les Deployments et Services.
+
 VM (la maison)
   └── K3s (le gestionnaire de l'immeuble, qui tourne dans la maison)
         └── Pods/Applications (les locataires, gérés par K3s)
@@ -340,16 +342,34 @@ VM (la maison)
 Test P2
 Aller dans p2/
 vagrant up
+
 vagrant status
+
 vagrant ssh noleclerS -c "hostname"
+
 vagrant ssh noleclerS -c "ip a"
+
 vagrant ssh noleclerS -c "sudo systemctl status k3s --no-pager" (verifie que k3s tourne)
-vagrant ssh noleclerS -c "kubectl get nodes -o wide" (verif que le noeud est pret)
+
+vagrant ssh noleclerS -c "kubectl get nodes -o wide" (verif que le La vm noleclerS est en mode ready)
+
 vagrant ssh noleclerS -c "kubectl get all" (verif que tous les Pods sont bien crees)
+
 vagrant ssh noleclerS -c "kubectl get ingress"
+
 Exécuter hosts.sh sur la machine hôte (pas dans la VM !) 
 -> bash ~/Bureau/IOT/p2/scripts/hosts.sh
+
 Tester le routage pour chaque application (depuis la machine hôte)
 -> curl http://app1.com
+
 -> curl http://app2.com
+
 -> curl http://192.168.56.110
+
+-----
+script hosts.sh 
+Au lieu de tester comme ceci -> 
+curl -H "Host: app1.com" http://192.168.56.110
+
+On fait directement -> curl http://app1.com
