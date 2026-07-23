@@ -303,6 +303,53 @@ hashicorp/http-echo — une image publique conçue spécifiquement pour ce genre
 
 image: hashicorp/http-echo
 args: ["-text=Hello from app1"]
-✅ La plus simple de toutes — pas de command/echo/&& à écrire, juste un argument direct
-✅ Image minuscule, démarre très vite
-❌ Moins connue que nginx (mais c'est un vrai outil largement utilisé pour exactement ce cas d'usage)
+La plus simple de toutes — pas de command/echo/&& à écrire, juste un argument direct
+Image minuscule, démarre très vite
+
+------------
+
+Ingress -> Service -> Pod -> Reponse
+
+Commande a appliquer 
+kubectl apply -f confs/
+
+K3s = une version allégée de Kubernetes, qui sert à créer, faire tourner, et maintenir en vie automatiquement des applications, réparties dans des "pods".
+------------
+
+
+Resume notions P2:
+
+K3s = version allégée de Kubernetes, qui crée et gère automatiquement des applications
+
+Pod = une copie en cours d'exécution d'une application (adresse IP instable, recréé si besoin)
+
+Deployment = tes instructions à K3s pour dire combien de copies (réplicas) créer, et à quoi elles doivent ressembler
+
+Service = point d'accès stable, qui retrouve ses pods grâce à un système d'étiquettes (labels), et transmet les requêtes vers l'un d'eux
+
+Ingress = le "réceptionniste", qui lit le Host de la requête et route vers le bon Service
+
+kubectl = l'outil en ligne de commande pour envoyer tes instructions (fichiers YAML) à K3s (kubectl apply -f ...)
+
+
+VM (la maison)
+  └── K3s (le gestionnaire de l'immeuble, qui tourne dans la maison)
+        └── Pods/Applications (les locataires, gérés par K3s)
+
+-----
+Test P2
+Aller dans p2/
+vagrant up
+vagrant status
+vagrant ssh noleclerS -c "hostname"
+vagrant ssh noleclerS -c "ip a"
+vagrant ssh noleclerS -c "sudo systemctl status k3s --no-pager" (verifie que k3s tourne)
+vagrant ssh noleclerS -c "kubectl get nodes -o wide" (verif que le noeud est pret)
+vagrant ssh noleclerS -c "kubectl get all" (verif que tous les Pods sont bien crees)
+vagrant ssh noleclerS -c "kubectl get ingress"
+Exécuter hosts.sh sur la machine hôte (pas dans la VM !) 
+-> bash ~/Bureau/IOT/p2/scripts/hosts.sh
+Tester le routage pour chaque application (depuis la machine hôte)
+-> curl http://app1.com
+-> curl http://app2.com
+-> curl http://192.168.56.110
