@@ -289,57 +289,51 @@ Requête (Host: app2.com) --> a 3 replicas donc 3 pods
 
 --------
 
-En tout -> P2 -> 3 applis soit 5 pods car appli 2 = 3 replicas donc 3 pods
-
-"1 appli = autant de Pods que de réplicas précisés" (1 par défaut, ou plus si demandé).
-
-On teste avec curl -H "Host: appX.com" 192.168.56.110
-→ Ingress lit le Host → appelle le bon Service → Service choisit un Pod disponible → le Pod répond "Hello from appX"
-
----------
-
-hashicorp/http-echo — une image publique conçue spécifiquement pour ce genre de cas : elle affiche juste le texte que tu lui donnes, sans bricolage de commande shell.
-
-
 image: hashicorp/http-echo
 args: ["-text=Hello from app1"]
 La plus simple de toutes — pas de command/echo/&& à écrire, juste un argument direct
 Image minuscule, démarre très vite
 
-------------
+-------------
 
-Ingress -> Service -> Pod -> Reponse
+Partie 2:
 
-Commande a appliquer 
-kubectl apply -f confs/
+OBJECTIF:
+Déployer 3 applications web différentes sur une seule instance K3s, accessibles depuis une unique IP mais routées vers le bon site grâce au nom d'hôte (Host) demandé, avec l'une d'elles répliquée sur 3 instances.
 
-K3s = une version allégée de Kubernetes, qui sert à créer, faire tourner, et maintenir en vie automatiquement des applications, réparties dans des "pods".
-------------
+BUT PEDAGOGIQUE:
+Apprendre les briques de base de Kubernetes pour décrire et exposer des applications (Deployment, Service, Ingress) et comprendre comment un cluster peut héberger plusieurs services distincts derrière un seul point d'entrée réseau.
+
+NOTIONS CLES:
+1. Deployment
+Décrit une application à faire tourner : quelle image utiliser, combien de copies (réplicas). Kubernetes lit cette description(voir fichier deployment.yaml) et crée automatiquement les Pods correspondants — un par réplica demandé.
+
+deployment.yaml: decrit l'application app1(et autres) : crée 1 Pod, étiqueté app: app1, faisant tourner un conteneur basé sur l'image hashicorp/http-echo, configuré pour répondre Hello from app1.
+
+2. Pod
+L'instance réellement active de l'application, celle qui tourne et répond aux requêtes. Un Deployment avec 3 replicas génère 3 Pods identiques.
+*Ce qu'il contient : un conteneur, créé automatiquement à partir de l'image référencée dans le Deployment (ici, hashicorp/http-echo) — c'est Kubernetes (via K3s et son container runtime, containerd) qui transforme cette image en conteneur actif, sans intervention manuelle.
+*Ce qu'il possède : sa propre adresse IP interne (accessible uniquement à l'intérieur du cluster, jamais directement depuis l'extérieur).
+*Son rôle : c'est le Pod (plus précisément, le conteneur qu'il fait tourner) qui répond réellement aux requêtes — le Deployment ne fait que décrire, le Service ne fait que rediriger, mais c'est le Pod qui exécute et génère la réponse.
+*Sa relation avec les réplicas : un Deployment avec replicas: 3 (comme app2) crée 3 Pods identiques, chacun une instance indépendante de la même application.
+
+3. Service
+Le pont entre l'Ingress et les Pods : il reçoit le trafic redirigé par l'Ingress et le transmet à un Pod disponible parmi ceux qu'il cible (via une étiquette partagée). Il fournit une adresse stable, indépendante des IP changeantes des Pods, et répartit la charge entre plusieurs Pods si l'application a plusieurs réplicas.
+
+service.yaml : décrit une adresse stable (nommée app1 etc...) qui cible tous les Pods portant l'étiquette app: app1, et fait la traduction entre le port 80 (utilisé pour la contacter) et le port 5678 (celui réellement écouté par le conteneur).
+
+4. Ingress
+Le point d'entrée qui reçoit toutes les requêtes externes, lit le Host demandé, et redirige vers le bon Service. Si aucun Host connu n'est reconnu, une règle par défaut redirige automatiquement vers app3.
+
+ingress.yaml: le fichier qui contient les règles de routage qui décident vers quel Service envoyer chaque requête, selon le Host demandé.
+
+5. Host
+Le Host est un champ de la requête HTTP qui précise le nom de domaine demandé (app1.com, app2.com...), indépendamment de l'IP de destination. C'est ce champ que l'Ingress utilise pour distinguer les 3 applications, qui partagent pourtant la même IP.
+Ex: curl -H "Host: app1.com" 192.168.56.110
 
 
-Resume notions P2:
-
-K3s = version allégée de Kubernetes, qui crée et gère automatiquement des applications
-
-Pod = une copie en cours d'exécution d'une application (adresse IP instable, recréé si besoin)
-
-Deployment = tes instructions à K3s pour dire combien de copies (réplicas) créer, et à quoi elles doivent ressembler
-
-Service = point d'accès stable, qui retrouve ses pods grâce à un système d'étiquettes (labels), et transmet les requêtes vers l'un d'eux
-
-Ingress = le "réceptionniste", qui lit le Host de la requête et route vers le bon Service
-
-kubectl = l'outil en ligne de commande pour envoyer tes instructions (fichiers YAML) à K3s (kubectl apply -f ...)
-
-
-la notion clé ici est de montrer comment Kubernetes permet d'exposer plusieurs applications différentes derrière une seule adresse IP, en utilisant un système de routage intelligent (l'Ingress) basé sur le Host demandé, tout en gérant la résilience et la répartition de charge via les Deployments et Services.
-
-VM (la maison)
-  └── K3s (le gestionnaire de l'immeuble, qui tourne dans la maison)
-        └── Pods/Applications (les locataires, gérés par K3s)
-
------
 Test P2
+
 Aller dans p2/
 vagrant up
 
@@ -367,9 +361,17 @@ Tester le routage pour chaque application (depuis la machine hôte)
 
 -> curl http://192.168.56.110
 
------
-script hosts.sh 
-Au lieu de tester comme ceci -> 
-curl -H "Host: app1.com" http://192.168.56.110
+Ouvrir un navigateur -> http://app1.com
+--------------------
+Ingress -> Service -> Pod -> Reponse
 
-On fait directement -> curl http://app1.com
+K3s = version allégée de Kubernetes, qui crée et gère automatiquement des applications
+K3s = une version allégée de Kubernetes, qui sert à créer, faire tourner, et maintenir en vie automatiquement des applications, réparties dans des "pods".
+
+kubectl = l'outil en ligne de commande pour envoyer tes instructions (fichiers YAML) à K3s (kubectl apply -f ...)
+
+la notion clé ici est de montrer comment Kubernetes permet d'exposer plusieurs applications différentes derrière une seule adresse IP, en utilisant un système de routage intelligent (l'Ingress) basé sur le Host demandé, tout en gérant la résilience et la répartition de charge via les Deployments et Services.
+
+VM (la maison)
+  └── K3s (le gestionnaire de l'immeuble, qui tourne dans la maison)
+        └── Pods/Applications (les locataires, gérés par K3s)
