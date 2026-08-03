@@ -155,6 +155,7 @@ vagrant ssh noleclerS -c "sudo systemctl status k3s --no-pager"
 vagrant ssh noleclerSW -c "sudo systemctl status k3s-agent --no-pager"
 
 vagrant ssh noleclerS puis kubectl get nodes -o wide
+ip a show $(ip route | grep default | awk '{print $5}')
 
 
 
@@ -362,6 +363,10 @@ Tester le routage pour chaque application (depuis la machine hôte)
 -> curl http://192.168.56.110
 
 Ouvrir un navigateur -> http://app1.com
+
+kubectl get ingress
+kubectl describe ingress apps-ingress
+
 --------------------
 Ingress -> Service -> Pod -> Reponse
 
@@ -401,7 +406,7 @@ Namespace 2 = dev : va heberger l'application à deployer.
 K3d = "K3s in Docker" , outil qui fait tourner K3s a l'intérieur de conteneurs Docker plutot que sur une VM, rendant la création de clusters Kubernetes beaucoup plus rapide et légere.
 
 Partie 1 : Vagrant crée une VM → K3s s'installe directement sur le système de cette VM
-Partie 3 : K3d crée des conteneurs Docker → K3s tourne à l'intérieur de ces conteneurs, eux-mêmes hébergés dans la VM de travail.
+Partie 3 : K3d demande a Docker de créer des conteneurs Docker → K3s tourne à l'intérieur de ces conteneurs, eux-mêmes hébergés dans la VM de travail.
 
 Docker = le logiciel (l'outil) qui sait créer et faire tourner des conteneurs
 Image Docker (ex: hashicorp/http-echo) = le modèle figé, pas encore actif — comme l'ISO d'Ubuntu
@@ -450,17 +455,10 @@ K3s creer le pod avec la'ppli wil42. K3d n'intervient plus une fois le cluster c
 C'est ensuite K3s qui reçoit le Deployment (via Argo CD qui l'applique) et qui crée réellement le Pod.
 
 -----------------------------------------------
-
-    PARTIE 3
-
-En mots simples : on change d'outil (K3d au lieu de Vagrant) et on embauche un "livreur robot" (Argo CD) qui surveille GitHub en permanence et met à jour notre application tout seul, sans qu'on ait jamais besoin de taper une commande manuelle.
-
-------------------
-
 résumé de la Partie 3 :
 
 Installer Docker + K3d dans IOT2 (script d'installation obligatoire, exigé par le sujet)
-K3d crée un cluster K3s à l'intérieur de conteneurs Docker (pas de VM cette fois)
+K3d crée un cluster K3s à l'intérieur de conteneurs Docker 
 Créer 2 namespaces : argocd (héberge Argo CD) et dev (héberge notre application)
 Créer un repo GitHub public contenant le fichier Deployment de l'application (wil42/playground ou notre propre appli), taguée v1
 Configurer Argo CD pour surveiller ce repo et synchroniser automatiquement le namespace dev
@@ -503,10 +501,10 @@ ETAPE 7 - Vérifier et prouver (preuve exacte du sujet)
 
 Points de vigilance :
 - Le script d'installation (Docker + K3d) est explicitement obligatoire pour cette partie, contrairement à p1
-- Bien comprendre la différence K3s vs K3d (exigé explicitement par le sujet)
+- comprendre la différence K3s vs K3d 
 - Le repo GitHub DOIT être public (Argo CD doit pouvoir le lire depuis Internet)
-- Ne jamais oublier de git push après une modification — sans ça, Argo CD ne voit rien, peu importe l'auto-save de l'éditeur
-- Argo CD ne remplace jamais git add/commit/push (toujours manuel) — il remplace seulement l'étape kubectl apply côté cluster
+- Ne jamais oublier de git push après une modification — sans ça, Argo CD ne voit rien
+- Argo CD remplace seulement l'étape kubectl apply côté cluster , pas le push sur Github
 
 ------------------
 
@@ -515,15 +513,12 @@ NOTIONS CLES
 1. K3d
 "K3s in Docker" — outil qui fait tourner K3s à l'intérieur de conteneurs Docker plutôt que sur une VM complète, rendant la création de clusters Kubernetes beaucoup plus rapide et légère.
 
-Partie 1 : Vagrant crée une VM → K3s s'installe directement sur le système de cette VM
-Partie 3 : K3d crée des conteneurs Docker → K3s tourne à l'intérieur de ces conteneurs, eux-mêmes hébergés dans IOT2
-
 Comparaison directe avec la Partie 1 :
-| Rôle | Partie 1 (VM) | Partie 3 (Docker) |
-| L'orchestrateur | Vagrant | K3d |
-| Le moteur | VirtualBox | Docker |
-| Le résultat créé | la VM | le conteneur |
-| Ce qui tourne dedans | K3s (installé via notre script) | K3s (déjà intégré dans l'image utilisée) |
+| Rôle |                         Partie 1 (VM) |                            Partie 3 (Docker) |
+| L'orchestrateur |                 Vagrant |                                    K3d |
+| Le moteur |                       VirtualBox |                                 Docker |
+| Le résultat créé |                   la VM |                                   le conteneur |
+| Ce qui tourne dedans |      K3s (installé via notre script) |        K3s (déjà intégré dans l'image utilisée) |
 
 2. Docker / Image / Conteneur
 Docker = le logiciel (l'outil) qui sait créer et faire tourner des conteneurs.
@@ -532,24 +527,24 @@ Conteneur = l'image démarrée, en train de tourner réellement — équivalent 
 
 Différence fondamentale VM vs Conteneur :
 - VM : VirtualBox simule du matériel complet, un OS entier et indépendant tourne dessus, avec son propre noyau
-- Conteneur : Docker utilise le noyau déjà existant de la machine hôte (IOT2) et isole juste un programme — pas de nouveau système à démarrer, donc beaucoup plus rapide et léger
+- Conteneur : Docker utilise le noyau déjà existant de la machine hôte (IOT) et isole juste un programme — pas de nouveau système à démarrer, donc beaucoup plus rapide et léger
 - Avantage VM : isolation plus forte, peut faire tourner un OS différent de l'hôte
 - Avantage conteneur : ultra léger, démarrage quasi instantané, très économe en RAM/CPU/disque
-- Le réseau : Docker crée un réseau privé logiciel entre ses conteneurs, mais en utilisant toujours le réseau de la machine hôte (IOT2) comme base
+- Le réseau : Docker crée un réseau privé logiciel entre ses conteneurs, mais en utilisant toujours le réseau de la machine hôte (IOT) comme base
 
 3. Les rôles de Docker liés au conteneur
 Télécharger l'image si besoin, créer le conteneur à partir de cette image, le démarrer/arrêter, l'isoler des autres programmes de la machine, lui donner accès aux ressources (CPU/RAM).
 
 4. Ce qui se passe entre la création du cluster et K3s qui tourne
-1. On lance la commande de création K3d
-2. K3d vérifie/télécharge l'image spéciale contenant K3s
-3. K3d crée un réseau Docker dédié
-4. K3d demande à Docker de créer le conteneur "serveur" → dès son démarrage, K3s se lance automatiquement dedans (pas de script d'installation à écrire, contrairement à p1)
-5. K3d crée aussi un conteneur "load balancer" séparé
-6. K3d configure automatiquement kubectl sur IOT2
+   1. On lance la commande de création K3d
+   2. K3d vérifie/télécharge l'image spéciale contenant K3s
+   3. K3d crée un réseau Docker dédié
+   4. K3d demande à Docker de créer le conteneur "serveur" → dès son démarrage, K3s se lance automatiquement dedans (pas de script d'installation à écrire, contrairement à p1)
+   5. K3d crée aussi un conteneur "load balancer" séparé
+   6. K3d configure automatiquement kubectl sur IOT
 
 5. Le conteneur "load balancer"
-Un conteneur séparé (pas imbriqué dans le conteneur serveur, un voisin côte à côte), dont le seul rôle est de faire le pont entre l'extérieur du réseau Docker (IOT2, notre terminal/kubectl) et le conteneur serveur qui contient K3s, cachés dans le réseau privé de Docker.
+Un conteneur séparé (pas imbriqué dans le conteneur serveur, un voisin côte à côte), dont le seul rôle est de faire le pont entre l'extérieur du réseau Docker (IOT, notre terminal/kubectl) et le conteneur serveur qui contient K3s, cachés dans le réseau privé de Docker.
 Comparable à l'Ingress de la Partie 2 dans l'idée (un point d'entrée qui redirige), même si techniquement à un niveau différent (Docker vs Kubernetes).
 
 6. Namespace
@@ -559,7 +554,7 @@ Namespace "dev" → héberge le Pod de notre application déployée (celle qu'Ar
 
 7. Argo CD
 Outil de déploiement continu (GitOps) : surveille en permanence un dossier/fichier précis sur GitHub (le deployment.yaml de notre appli), compare avec ce qui tourne dans le cluster, et synchronise automatiquement dès qu'une différence est détectée — sans commande manuelle de notre part.
-Ne fait PAS git add/commit/push à notre place — ça reste toujours manuel. Argo CD remplace seulement l'étape kubectl apply.
+Argo CD remplace seulement l'étape kubectl apply.
 Tourne lui-même sous forme de Pods, à l'intérieur du namespace argocd du cluster qu'il gère.
 Pas un composant natif de Kubernetes — un projet séparé (hébergé par la CNCF, comme Kubernetes), mais conçu spécifiquement pour piloter des clusters Kubernetes.
 
@@ -573,7 +568,7 @@ Toi : tu modifies deployment.yaml (ex: v1 → v2) → git add/commit/push (TOUJO
    → le fichier est maintenant sur GitHub
       → Argo CD (qui surveille en permanence) voit que le repo a changé
          → Argo CD applique AUTOMATIQUEMENT ce changement au cluster (équivalent de kubectl apply, mais automatique et répété)
-            → K3s (pas K3d, qui n'intervient plus une fois le cluster créé) crée/met à jour le Pod dans le namespace dev
+            → K3s crée/met à jour le Pod dans le namespace dev
 
 
 ------------------
@@ -712,14 +707,16 @@ install.sh: script qui prepare tous les outils en ligne de commnade necessaire :
 -> kubectl (pour parler au cluster)
 
 
-start.sh : 
--> creer le cluster k3d (conteneur serveur + load balancer, créés automatiquement)
--> creer les deux namespaces : argocd et dev
--> installe reellement Argo CD dans le cluster
+start.sh : utiliser ces outils pour créer/configurer tout :
+-> creer le cluster k3d (conteneur serveur + load balancer, créés automatiquement)(k3d cluster create)
+-> creer les deux namespaces : argocd et dev (kubectl create namespace)
+-> installe reellement Argo CD dans le cluster (kubectl apply -f .../install.yaml)
 -> Attendre qu'Argo CD soit prêt
--> Récupérer le mot de passe admin
--> Le tunnel vers Argo CD
--> Connexion et configuration finale: Crée l'"Application" Argo CD — la commande la plus importante, celle qui dit précisément quoi surveiller
+-> Récupérer le mot de passe admin d'Argo CD depuis le Secret
+-> Creer le tunnel vers Argo CD (kubectl port-forward svc/argocd-server ... 8080:443 &)
+   puis attendre que le tunnel soit vraiment actif (nc -z localhost 8080)
+-> Se connecter (argocd login, rendu possible grâce à ce tunnel qui vient d'être créé)
+-> Configurer Argo CD pour surveiller notre repo/dossier (argocd app create ,Crée l'"Application" Argo CD — la        commande la plus importante, celle qui dit précisément quoi surveiller)
 
 Le certificat du kubeconfig → pour parler à Kubernetes/K3s (via kubectl) se trouve dans un vrai fichier standard (~/.kube/config), automatiquement maintenu.
 
@@ -742,3 +739,121 @@ Ingress	                         networking.k8s.io	      networking.k8s.io/v1
 
 
 Le groupe dit QUELLE catégorie de ressource on décrit (apps pour Deployment, networking.k8s.io pour Ingress...), et v1 dit QUELLE version stable de ce format on utilise — les deux sont fixes, à copier tels quels, jamais liés à notre propre application.
+----------
+
+Difference entre K3s et K3d:
+-Kubernetes = tout un système qui permet de gérer un cluster (créer/maintenir des applications réparties sur plusieurs machines)
+-K3s = une version allégée de ce système, plus simple à installer
+-K3d = pas un Kubernetes lui-même, mais un outil qui installe et fait tourner K3s dans un conteneur Docker, plutôt que sur une VM
+
+On parle a K3s via kubectl.
+K3d creer le fichier kube-config et y copie (IP + certificat) que k3s a generé.
+Argo CD utilise un mot d passe admin(stocké dans un secret Kubernetes, et non un fichier automatique).
+
+Le Pod n'existe PAS encore, nulle part, tant qu'on n'a pas écrit et appliqué le deployment.yaml. C'est cette action précise (écrire le fichier + l'appliquer via Argo CD) qui fait naître le Pod pour la première fois — en utilisant l'image de Wil comme "ingrédient". C'est K3s qui le lit le fichier .yaml et creer reellement le Pod.
+
+Dans  fichier deployment.yaml:
+image: wil42/playground:v1    ← "utilise CE kit précis (celui de Wil, version v1)"
+replicas: 1                    ← "fais-en cuire 1 exemplaire"
+containerPort: 8888             ← "sers-le sur ce port"
+
+La chaîne GitOps va d'un simple changement de texte dans un fichier sur GitHub, jusqu'à la mise à jour automatique et réelle de l'appli qui tourne dans le cluster — sans intervention manuelle entre les deux.
+
+CHAINE GITOPS:
+1. TOI : tu écris/modifies deployment.yaml (image: wil42/playground:v1)
+2. TOI : git add, commit, push → le fichier est sur GitHub
+3. Argo CD (déjà configuré pour surveiller ce chemin) détecte que le fichier existe/a changé
+4. Argo CD applique automatiquement ce fichier au cluster (équivalent de kubectl apply, mais automatique)
+5. K3s lit le fichier, crée le Pod (image wil42/playground:v1) dans le namespace "dev"
+6. TOI : tu testes avec curl → tu vois "v1"
+
+--- plus tard, pour tester le changement de version ---
+
+7. TOI : tu modifies deployment.yaml (v1 → v2), tu push à nouveau
+8. Argo CD détecte CE nouveau changement
+9. Argo CD applique automatiquement la mise à jour
+10. K3s remplace le Pod par une version utilisant l'image v2
+11. TOI : tu testes à nouveau avec curl → tu vois maintenant "v2", sans avoir tapé aucune commande kubectl toi-même
+
+------
+namespace argocd heberge le logiciel Argo CD lui meme
+namespace dev heberge l'appli de Wil
+
+p3/
+├── scripts/
+│   └── (nos scripts .sh)
+└── confs/
+    └── deployment.yaml
+    └── service.yaml
+
+
+Le tunnel (port-forward):
+Le problème de base : Argo CD tourne à l'intérieur du cluster (comme un Pod, avec un Service qui lui donne une adresse) — mais cette adresse est interne, seulement joignable depuis l'intérieur du cluster. Depuis ton terminal IOT2, tu ne peux pas l'atteindre directement.
+
+Ce que fait le tunnel : kubectl port-forward crée un pont temporaire entre un port de ta machine (localhost:8080) et le Service d'Argo CD, à l'intérieur du cluster. Tout ce que tu envoies à localhost:8080 est automatiquement redirigé jusqu'à Argo CD, et sa réponse revient par le même chemin.
+
+Pourquoi on en a besoin, précisément ici : parce qu'on veut utiliser la commande argocd login (et potentiellement l'interface web) depuis le terminal d'IOT2 pour configurer Argo CD — sans ce tunnel, argocd login localhost:8080 échouerait, puisqu'il n'y aurait littéralement rien qui écoute sur ce port depuis l'extérieur du cluster.
+
+Analogie, reprise : Argo CD est dans un quartier fermé (le réseau interne du cluster), sans porte donnant sur la rue. Le port-forward, c'est un tuyau temporaire qu'on installe depuis la rue (IOT2) directement jusqu'à la porte d'Argo CD — le temps qu'on en ait besoin, pas une installation permanente.
+
+Point important à retenir : c'est temporaire et manuel — dès que tu arrêtes ce tunnel (ou éteins la VM), il faut le relancer si tu veux à nouveau parler à Argo CD depuis l'extérieur.
+---------
+
+Le tunnel connecte toujours la machine à un Service (l'adresse stable), jamais directement à un Pod.
+------------
+Notions sur les Ports:
+
+curl → port du Service → le Service redirige en interne → targetPort du Pod
+
+ports:
+  - port: 80          ← le port du SERVICE (ce qu'on contacte)
+    targetPort: 5678  ← le port RÉEL du Pod (imposé par le programme lui-même)
+-------------
+
+Chapitre 1 — Préparer les outils
+
+Tout commence sur IOT2, avec un script install.sh. Ce script installe 4 outils, un par un : Docker (le moteur qui saura créer et gérer des conteneurs), K3d (l'outil qui va orchestrer la création d'un cluster K3s dans ces conteneurs), kubectl (pour pouvoir parler au futur cluster), et le binaire argocd (la télécommande pour parler à Argo CD plus tard). Rien n'est encore créé à ce stade — on prépare juste la boîte à outils.
+
+Chapitre 2 — Le cluster naît
+
+Le script start.sh prend le relais. Première commande : k3d cluster create. K3d demande alors à Docker de créer deux conteneurs côte à côte : un conteneur "serveur", dans lequel K3s démarre immédiatement et automatiquement, et un conteneur "load balancer", qui sert de pont entre l'extérieur du réseau Docker (IOT2) et ce cluster caché à l'intérieur.
+
+Au moment même où K3s démarre dans son conteneur, il génère lui-même son propre certificat admin — une preuve d'identité qui donnera les pleins pouvoirs sur le cluster. K3d va aussitôt récupérer ce certificat et l'écrire dans le fichier ~/.kube/config sur IOT2, accompagné de l'adresse du cluster. Résultat : kubectl peut immédiatement parler au cluster, sans aucune configuration manuelle — contrairement à toute la galère qu'on avait eue en Partie 1.
+
+Chapitre 3 — Les deux namespaces
+
+Avec kubectl, on crée deux "compartiments" séparés à l'intérieur de ce cluster tout neuf : le namespace argocd, qui va bientôt héberger le logiciel Argo CD lui-même, et le namespace dev, qui accueillera plus tard l'application qu'on veut déployer.
+
+Chapitre 4 — Argo CD s'installe réellement
+
+kubectl apply applique le fichier YAML officiel d'Argo CD, publié par ses propres créateurs, dans le namespace argocd. C'est cette commande précise qui fait naître les vrais Pods d'Argo CD à l'intérieur du cluster — jusque-là, on n'avait que le binaire CLI (la télécommande), maintenant on a le "téléviseur" qui tourne réellement.
+
+Le script attend patiemment que ces Pods soient bien démarrés et en bonne santé (kubectl wait), puis attend encore qu'Argo CD génère, de son côté, son propre mot de passe admin — stocké non pas dans un fichier automatique comme pour K3s, mais dans un Secret Kubernetes, à l'intérieur du cluster. Le script va le chercher manuellement et le récupère.
+
+Chapitre 5 — Configurer Argo CD
+
+Pour pouvoir parler à Argo CD depuis le terminal d'IOT2, il faut d'abord construire un tunnel temporaire (kubectl port-forward svc/argocd-server ... 8080:443) — un pont entre localhost:8080 sur IOT2 et le Service d'Argo CD, caché à l'intérieur du cluster.
+
+Une fois ce tunnel actif, argocd login s'y connecte avec le mot de passe récupéré. Puis, toujours à travers ce même tunnel, deux commandes essentielles : argocd repo add (dire à Argo CD "voici un repo GitHub que tu as le droit de lire"), puis argocd app create, la commande la plus importante de toute la partie — celle qui précise exactement quel repo, quel dossier précis à l'intérieur (p3/confs/), et quel namespace cible (dev) surveiller, avec une synchronisation automatique.
+
+Chapitre 6 — Le fichier qui manquait
+
+Mais attention : à ce stade, Argo CD sait où regarder — encore faut-il que quelque chose existe réellement à cet endroit. C'est là que nous entrons en jeu, séparément des scripts : on écrit un fichier deployment.yaml, qui décrit précisément l'application qu'on veut faire tourner — l'image wil42/playground:v1 (le "kit-repas" préparé par Wil, jamais encore cuisiné), avec 1 réplica, écoutant sur le port 8888. On commit, on push ce fichier sur notre repo GitHub public.
+
+Chapitre 7 — La première synchronisation
+
+Argo CD, qui surveille en permanence ce dossier précis, détecte que le fichier existe désormais. Automatiquement, sans qu'on tape la moindre commande kubectl apply, il applique ce Deployment au cluster. K3s le lit, et fait naître pour la première fois un Pod réel, dans le namespace dev, faisant tourner l'appli de Wil en version v1.
+
+Pour vérifier, on ouvre un deuxième tunnel séparé — cette fois vers le Service de l'appli elle-même (kubectl port-forward svc/wil-playground -n dev 8888:8888), rien à voir avec Argo CD, juste pour nous permettre de tester. curl http://localhost:8888/ répond : {"status":"ok", "message": "v1"}.
+
+Chapitre 8 — La preuve finale
+
+On modifie une seule ligne dans notre fichier deployment.yaml : v1 devient v2. On push ce changement sur GitHub.
+
+Argo CD, toujours en surveillance, détecte cette différence. Il applique automatiquement la mise à jour. Kubernetes fait alors une mise à jour progressive : un nouveau Pod naît, avec l'image v2, et une fois prêt, l'ancien Pod (v1) est supprimé.
+
+On relance curl http://localhost:8888/ — la réponse est maintenant {"status":"ok", "message": "v2"}. Sans jamais avoir tapé une seule commande Kubernetes manuelle pour cette mise à jour — juste un changement de texte et un git push. La boucle GitOps est bouclée, et prouvée.
+
+
+Docker Hub est le catalogue public en ligne pour les images Docker 
+Dans notre projet, notre deployment.yaml référence directement une image hébergée sur Docker Hub — c'est ça qui permet à Kubernetes de la télécharger et de créer le Pod automatiquement.
