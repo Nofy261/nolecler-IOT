@@ -946,3 +946,6 @@ verfier que cela a fonctionne: ps aux | grep "port-forward"
 
 détruire le cluster K3d:
 k3d cluster delete iot
+---------
+
+apres start.sh il faut verifier -> argocd app get wil-playground
