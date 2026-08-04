@@ -36,7 +36,6 @@ sleep 1
 argocd app create wil-playground \
   --repo https://github.com/Nofy261/nolecler-IOT \
   --path p3/confs \
-  --revision nofy \
   --dest-server https://kubernetes.default.svc \
   --dest-namespace dev \
   --project default \

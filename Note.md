@@ -929,8 +929,20 @@ Activer le port-forward vers l'application wil-playground (port 8888) :
 kubectl port-forward svc/wil-playground -n dev 8888:8888 &
 
 Test:
-curl http://localhost:8888/          # Test app
-curl -k https://localhost:8080/      # Test Argo CD (le -k ignore le certificat auto-signé)
+curl http://localhost:8888/          # Test app, tunnel vers l'appli de Wil
+curl -k https://localhost:8080/      # Test Argo CD , tunnel vers ArgoCD(le -k ignore le certificat auto-signé)
 (-k = c'est juste pour dire à curl de faire confiance au certificat HTTPS "maison" généré par Argo CD, plutôt que d'exiger un vrai certificat officiel.)
 
+--revision nofy
 
+commande pour forcer la synchornisation si attente trop long
+argocd app sync wil-playground
+---------------
+
+arrêter les tunnels port-forward:
+pkill -f "kubectl port-forward"
+
+verfier que cela a fonctionne: ps aux | grep "port-forward"
+
+détruire le cluster K3d:
+k3d cluster delete iot
