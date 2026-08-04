@@ -857,3 +857,80 @@ On relance curl http://localhost:8888/ — la réponse est maintenant {"status":
 
 Docker Hub est le catalogue public en ligne pour les images Docker 
 Dans notre projet, notre deployment.yaml référence directement une image hébergée sur Docker Hub — c'est ça qui permet à Kubernetes de la télécharger et de créer le Pod automatiquement.
+
+---------------
+start.sh:
+
+ArgoCD demarre -> genere lui-meme son MDP -> creer lui meme le secret pour le stocker -> Le sscript(via kubectl) va chercher ce MDP danc ce secret.
+
+Reuperer le MDP de argoCd -> creer le tunnel vers argocd-server port 8080(sert a se connecter a l'interface web d'ArgoCD, on garde ce tunnel ouvert expres) -> attendre qu'il soit actif (boucle) -> puis utilser les commandes argocd login , argocd repo add, argocd app create  
+
+Un 2eme tunnel est creer pour tester l'appli elle meme 
+
+Tunnel 1:
+Ta machine locale (port 8080)
+    ↓ tunnel kubectl port-forward
+Service argocd-server (namespace argocd, port 443)
+    ↓
+Pod(s) Argo CD
+
+Tunnel 2:
+Ta machine locale (port 8888)
+    ↓ tunnel kubectl port-forward
+Service wil-playground (namespace dev, port 8888)
+    ↓ (le Service utilise le système de labels/selector, comme en P2)
+Pod wil-playground-7796fcdb67-j7nss
+
+Donc:
+TOI (curl http://localhost:8888)
+    ↓
+kubectl port-forward (le tunnel)
+    ↓
+Service "wil-playground" (dans le namespace dev)
+    ↓ (grâce au selector/labels)
+Pod "wil-playground-7796fcdb67-j7nss" (qui fait vraiment tourner l'application)
+    ↓
+Réponse : {"status":"ok", "message": "v1"}
+--------------
+
+Test P3:
+
+Aller dasn p3 puis -> sudo bash scripts/install.sh
+
+Verifier que l'installation a bien fonctionne:
+docker --version
+k3d --version
+kubectl version --client
+argocd version --client
+
+bash scripts/start.sh 
+-> Creer le cluster K3d
+-> Creer les namespaces
+-> Installer Argo CD
+-> Se connecter à Argo CD, ajouter le repo GitHub
+-> Créer l'Application Argo CD qui va déployer automatiquement wil-playground dans dev
+
+
+
+
+----------
+sudo usermod -aG docker $USER
+exit
+
+k3d cluster stop iot 
+
+Vérifier quels port-forwards sont actuellement actifs (Argo CD + App) :
+ps aux | grep "port-forward"
+
+Activer le port-forward vers Argo CD (API/interface web, port 8080) :
+kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+
+Activer le port-forward vers l'application wil-playground (port 8888) :
+kubectl port-forward svc/wil-playground -n dev 8888:8888 &
+
+Test:
+curl http://localhost:8888/          # Test app
+curl -k https://localhost:8080/      # Test Argo CD (le -k ignore le certificat auto-signé)
+(-k = c'est juste pour dire à curl de faire confiance au certificat HTTPS "maison" généré par Argo CD, plutôt que d'exiger un vrai certificat officiel.)
+
+
