@@ -949,3 +949,80 @@ k3d cluster delete iot
 ---------
 
 apres start.sh il faut verifier -> argocd app get wil-playground
+-----------
+
+SUJET DE CORRECTION P3
+
+1 - Montrer le script d'installation en fonctionnement
+-> sudo bash scripts/install.sh
+
+2 - Démarrer l'infrastructure
+-> k3d cluster delete iot
+-> bash scripts/start.sh
+
+3 - Vérifier la présence et comprendre le contenu des fichiers de config
+-> p3/scripts/install.sh
+-> p3/scripts/start.sh
+-> p3/confs/deployment.yaml
+-> p3/confs/service.yaml
+
+4 - Vérifier les 2 namespaces ("at least 2 namespaces in K3d: 'argocd' and 'dev'")
+-> kubectl get ns
+
+5 - Vérifier au moins 1 pod dans dev ("at least 1 pod in the 'dev' namespace")
+-> kubectl get pods -n dev
+
+6 - Expliquer la différence entre namespace et pod
+
+7 - Vérifier que les services nécessaires tournent
+-> kubectl get pods -n argocd (A tester -> kubectl get svc)
+-> kubectl get svc -n dev
+
+8 - Argo CD installé, accessible en navigateur avec login/mot de passe ("You can access it in your web browser. You will need a login and a password")
+-> kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+-> ouvrir http://localhost:8080, admin + mot de passe affiché
+
+9 - Vérifier le login dans le nom du repo GitHub
+-> nolecler-IOT
+
+10 - Vérifier l'image Docker utilisée ("Check that a Docker image is used in the Github repository")
+-> cat p3/confs/deployment.yaml | grep image
+-> image: wil42/playground:v1
+
+11 - Naviguer dans Argo CD, comprendre son fonctionnement ("try to understand how it basically works... navigate through the application")
+->  une fois connecté dans le navigateur (point 8), cliquer sur l'application wil-playground dans l'interface, et regarder le graphique visuel qui apparaît (Deployment → Pod → Service, avec leur statut Synced/Healthy) — et être capable d'expliquer ce qu'on voit.
+
+12 - Vérifier l'accès à l'appli en v1 ("Check that the v1 application can be accessed")
+-> curl http://localhost:8888/
+
+13 - Vérifier que Docker Hub est utilisé ("Verify that Dockerhub is used. This part is important")
+-> montrer https://hub.docker.com/r/wil42/playground
+
+14 - Modifier, commit, push ("you must commit and push a modification")
+-> Modifier l'image dans deployment.yaml en v2
+-> git add p3/confs/deployment.yaml
+-> git commit -m "update to v2"
+-> git push
+
+15 - Synchro manuelle si besoin ("if synchronizing didn't happen, do it manually in Argo CD")
+-> argocd app sync wil-playground
+
+16 - Vérifier la synchro avec l'opération donnée en exemple ("Ensure that the application was successfully synchronized using operation given as an example in the subject")
+-> curl http://localhost:8888/
+
+----****----
+
+Commande en plus:
+
+k3d cluster list -> état du cluster
+kubectl get nodes -> nœud(s) Ready
+docker ps -> voir les conteneurs Docker réels (serveur K3s + load balancer)
+jobs -> liste les tunnels actifs dans ta session
+sudo lsof -i :8080 -> vérifie si le tunnel Argo CD est bien ouvert
+sudo lsof -i :8888 -> vérifie si le tunnel de l'appli est bien ouvert
+argocd app get wil-playground  -> statut détaillé de la synchro, vu par Argo CD
+kubectl get deployment wil-playground -n dev -o jsonpath='{.spec.template.spec.containers[0].image}' -> quelle version d'image tourne réellement
+
+arrêter les tunnels port-forward -> pkill -f "kubectl port-forward"
+verifier que cela a fonctionne -> ps aux | grep "port-forward"
+

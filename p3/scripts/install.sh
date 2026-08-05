@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Docker
 sudo apt-get update
 sudo apt-get install ca-certificates curl -y

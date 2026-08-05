@@ -1,5 +1,13 @@
 #!/bin/bash
 
+echo -e "\nChecking docker group membership...\n"
+if ! groups | grep -q '\bdocker\b'; then
+  echo -e "\nAdding $USER to the docker group...\n"
+  sudo usermod -aG docker "$USER"
+  echo -e "\nRe-executing script with docker group active...\n"
+  exec sg docker -c "$0 $*"
+fi
+
 echo -e "\nCreating the cluster\n"
 k3d cluster create iot
 
