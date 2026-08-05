@@ -956,47 +956,81 @@ SUJET DE CORRECTION P3
 1 - Montrer le script d'installation en fonctionnement
 -> sudo bash scripts/install.sh
 
+Verif si cela a bien fonctionnee:
+docker --version
+k3d --version
+kubectl version --client
+argocd version --client
+
 2 - Démarrer l'infrastructure
--> k3d cluster delete iot
+-> Verification avant de lancer le script : k3d cluster list
+-> k3d cluster delete iot (supprimer un cluster existant)
 -> bash scripts/start.sh
 
+Verifier que l'USER est bien dans groupe docker
+-> groups
+
 3 - Vérifier la présence et comprendre le contenu des fichiers de config
--> p3/scripts/install.sh
--> p3/scripts/start.sh
--> p3/confs/deployment.yaml
--> p3/confs/service.yaml
+-> p3/scripts/install.sh (script qui Installe tous les outils nécessaires — Docker, K3d, kubectl, et le CLI argocd — avant de pouvoir monter l'infrastructure)
+
+-> p3/scripts/start.sh (Ce script crée le cluster K3d, les namespaces argocd et dev, installe Argo CD, s'y connecte, puis crée une Application Argo CD qui va automatiquement déployer mon app depuis mon repo GitHub)
+
+-> p3/confs/deployment.yaml (C'est le manifest Kubernetes qui décrit comment déployer l'application wil-playground — quelle image Docker utiliser (wil42/playground:v1), combien de replicas, et sur quel port elle écoute.)
+
+-> p3/confs/service.yaml (Service Kubernetes c'est ce qui permet de contacter mon application via un nom fixe (wil-playground) et un port fixe (8888), sans avoir à connaître l'adresse exacte du pod — qui peut changer à chaque redéploiement)
 
 4 - Vérifier les 2 namespaces ("at least 2 namespaces in K3d: 'argocd' and 'dev'")
--> kubectl get ns
+-> kubectl get ns 
+(montrer argocd et dev, les autres sont créés automatiquement par Kubernetes à chaque cluster, ils gèrent le fonctionnement interne du système)
 
 5 - Vérifier au moins 1 pod dans dev ("at least 1 pod in the 'dev' namespace")
 -> kubectl get pods -n dev
+(l'appli de Wil doit y etre et visible)
 
 6 - Expliquer la différence entre namespace et pod
+Namespace : un contenant de pod (ou plusieurs pods)
+Pod : c'est l'enveloppe Kubernetes qui contient un ou plusieurs conteneurs Docker , là où tourne l'application (Wil).
+Ici chaque pod wil-playground contient exactement 1 conteneur Docker, celui qui fait tourner l'application."
 
 7 - Vérifier que les services nécessaires tournent
--> kubectl get pods -n argocd (A tester -> kubectl get svc)
--> kubectl get svc -n dev
+-> kubectl get pods -n argocd (Optionnel: vérifie que les pods d'Argo CD tournent bien (Running)) (A tester -> kubectl get svc)
+
+-> kubectl get svc -n argocd
+*** argocd-server -> Le service argocd-server est celui qui expose l'interface web et l'API d'Argo CD, sur le port 443 (HTTPS) en interne. C'est via ce service que je crée mon tunnel port-forward, pour accéder à l'interface depuis mon navigateur sur localhost:8080. (permet d'accéder à l'interface web et de piloter Argo CD)
+*** argocd-repo-server : celui qui va chercher les fichiers sur mon repo GitHub
+
+-> kubectl get svc -n dev -> Le service wil-playground expose mon application sur le port 8888 à l'intérieur du cluster. C'est via ce service que j'accède à l'app depuis l'extérieur, grâce au port-forward
 
 8 - Argo CD installé, accessible en navigateur avec login/mot de passe ("You can access it in your web browser. You will need a login and a password")
--> kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
--> ouvrir http://localhost:8080, admin + mot de passe affiché
+-> On recupere le MDP generer par ArgoCd ( a utiliser pour la connexion a l interface web de argocd)
+-> kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d (on recupere le MDP admin. Ex: NY4ujjZbE530n4Ed)
+-> ouvrir https://localhost:8080
+-> Username = admin
+-> mot de passe = celui qu'on vient de recuperer 
+-> Une fois a l'interieur de ArgoCd, Expliquer le schema (Question 11)
 
 9 - Vérifier le login dans le nom du repo GitHub
--> nolecler-IOT
+-> nolecler-IOT 
 
 10 - Vérifier l'image Docker utilisée ("Check that a Docker image is used in the Github repository")
 -> cat p3/confs/deployment.yaml | grep image
 -> image: wil42/playground:v1
+-> On peut verifier directement aussi via l'interface de argoCd
 
 11 - Naviguer dans Argo CD, comprendre son fonctionnement ("try to understand how it basically works... navigate through the application")
 ->  une fois connecté dans le navigateur (point 8), cliquer sur l'application wil-playground dans l'interface, et regarder le graphique visuel qui apparaît (Deployment → Pod → Service, avec leur statut Synced/Healthy) — et être capable d'expliquer ce qu'on voit.
 
 12 - Vérifier l'accès à l'appli en v1 ("Check that the v1 application can be accessed")
+-> Ouvrir un 2eme terminal 
 -> curl http://localhost:8888/
+-> Le resultat affichee doit etre:  {"status":"ok", "message": "v1"}
 
 13 - Vérifier que Docker Hub est utilisé ("Verify that Dockerhub is used. This part is important")
--> montrer https://hub.docker.com/r/wil42/playground
+-> montrer https://hub.docker.com/r/wil42/playground 
+Ici montrer que c'est bien le meme qu'on utlise dans le projet 
+Dans deployment.yaml -> image: wil42/playground:v1 
+Dans dockerHub c'est aussi -> wil42/playground Et Montrer le Tags dans dockerHub
+
 
 14 - Modifier, commit, push ("you must commit and push a modification")
 -> Modifier l'image dans deployment.yaml en v2
@@ -1004,11 +1038,13 @@ SUJET DE CORRECTION P3
 -> git commit -m "update to v2"
 -> git push
 
-15 - Synchro manuelle si besoin ("if synchronizing didn't happen, do it manually in Argo CD")
--> argocd app sync wil-playground
+15 - Attendre puis Synchro manuelle si besoin ("if synchronizing didn't happen, do it manually in Argo CD")
+-> argocd app sync wil-playground (commande si l'attente de la synchro est trop long)
+-> puis curl http://localhost:8888/
 
 16 - Vérifier la synchro avec l'opération donnée en exemple ("Ensure that the application was successfully synchronized using operation given as an example in the subject")
 -> curl http://localhost:8888/
+-> Le resulat doit etre -> {"status":"ok", "message": "v2"}
 
 ----****----
 
@@ -1026,3 +1062,40 @@ kubectl get deployment wil-playground -n dev -o jsonpath='{.spec.template.spec.c
 arrêter les tunnels port-forward -> pkill -f "kubectl port-forward"
 verifier que cela a fonctionne -> ps aux | grep "port-forward"
 
+kubectl get pods -A -> voir les pods de tous les namespaces en même temps
+---------
+
+kubectl = l'outil universel pour parler à N'IMPORTE QUEL cluster Kubernetes (K3s, K3d....)
+K3d = l'outil qui crée des clusters K3s dans des conteneurs Docker
+K3s = la distribution Kubernetes légère elle-même, qui tourne à l'intérieur
+
+
+Explication:
+ARGOCD_PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
+
+argocd login localhost:8080 --username admin --password "$ARGOCD_PASS" --insecure
+
+"On a récupéré le mot de passe qu'on a mis dans une variable" ✅ Exact — ARGOCD_PASS contient le mot de passe généré automatiquement par Argo CD lors de son installation, stocké dans un Secret Kubernetes.
+"Pour se connecter/parler à Argo CD, il faut un compte admin" ✅ Exact — Argo CD, comme n'importe quel système sécurisé, exige une authentification avant de pouvoir agir dessus (créer des apps, forcer des syncs, etc.).
+"Ce compte admin doit donner le mot de passe récupéré" ✅ Exact — c'est exactement ce que fait la commande argocd login localhost:8080 --username admin --password "$ARGOCD_PASS".
+"Argo CD va vérifier, il voit l'admin et le bon mot de passe, et accepte la connexion" ✅ Exact — Argo CD compare ce qu'on lui envoie avec ce qu'il a en interne, et valide l'authentification.
+"Admin, c'est l'username par défaut pour le compte qui va se connecter à Argo CD" ✅ Exactement ça — admin est le compte administrateur créé automatiquement à l'installation d'Argo CD, avec tous les droits sur cette instance Argo CD précise (pas sur le système Linux, ni sur GitHub — juste sur Argo CD lui-même).
+
+Cluster Kubernetes
+    └── Namespace (ex: dev)
+            └── Pod (ex: wil-playground-xxx)
+                    └── Conteneur(s) Docker (ex: le conteneur qui fait tourner l'app wil42/playground)
+
+
+TOI (navigateur)
+    ↓ tu tapes https://localhost:8080
+    ↓
+LE TUNNEL kubectl port-forward
+    (c'est UN SEUL processus qui fait le pont)
+    ↓ redirige vers
+Service argocd-server, port 443 (dans le cluster)
+    ↓
+Pod argocd-server (le vrai programme qui répond)
+
+8080 EST le port sur lequel le tunnel écoute, sur ma machine locale. Le tunnel lui-même redirige ensuite directement vers le port 443 d'Argo CD, dans le cluster.
+en résumé : il n'y a que 2 ports — 8080 (ta machine) et 443 (Argo CD dans le cluster) — reliés directement par UN SEUL tunnel, sans étape intermédiaire supplémentaire.
