@@ -1039,12 +1039,42 @@ Dans dockerHub c'est aussi -> wil42/playground Et Montrer le Tags dans dockerHub
 -> git push
 
 15 - Attendre puis Synchro manuelle si besoin ("if synchronizing didn't happen, do it manually in Argo CD")
--> argocd app sync wil-playground (commande si l'attente de la synchro est trop long)
--> puis curl http://localhost:8888/
+-> Reteste si la synchro a fonctionne: curl http://localhost:8888/
+-> Sinon -> argocd app sync wil-playground (commande si l'attente de la synchro est trop long)
+
+SI PROBLEME ICI :
+Problème connu : "Empty reply from server" après un changement de version (v1→v2)
+Le problème en mots simples
+
+Quand Argo CD déploie une nouvelle version de l'application (v1 → v2), Kubernetes ne modifie pas le pod existant — il supprime l'ancien pod et en crée un tout nouveau, avec un nom différent.
+
+Le tunnel qu'on a créé avec kubectl port-forward est connecté à un pod précis, pas à l'application en général. Donc quand l'ancien pod disparaît, le tunnel devient cassé — même s'il continue parfois d'apparaître comme "actif" dans la liste des processus.
+
+Résultat visible : curl http://localhost:8888/ renvoie Empty reply from server, alors que la nouvelle version (v2) tourne bien dans le cluster.
+
+Point important à retenir : ce n'est pas un bug de notre projet — c'est le fonctionnement normal de Kubernetes à chaque redéploiement. Il faut donc relancer le tunnel après chaque changement de version.
 
 16 - Vérifier la synchro avec l'opération donnée en exemple ("Ensure that the application was successfully synchronized using operation given as an example in the subject")
 -> curl http://localhost:8888/
 -> Le resulat doit etre -> {"status":"ok", "message": "v2"}
+
+-> Si erreur = "Empty reply from server"
+
+Le déploiement vers v2 a supprimé l'ancien pod (v1) et en a créé un nouveau (v2) — donc le tunnel port-forward, qui pointait vers l'ancien pod, est maintenant cassé.
+Solution :
+1. Tuer l'ancien tunnel cassé:
+-> pkill -f "kubectl port-forward svc/wil-playground"
+
+2. Vérifier que le nouveau pod (v2) tourne bien
+-> kubectl get pods -n dev
+
+3. Relancer un tunnel frais qui va automatiquement se connecter au pod actuel (v2)
+-> kubectl port-forward svc/wil-playground -n dev 8888:8888 &
+
+4. Retester
+-> curl http://localhost:8888/
+
+
 
 ----****----
 
