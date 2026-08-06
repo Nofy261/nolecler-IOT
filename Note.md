@@ -1,5 +1,3 @@
-But du projet:
-Apprendre à faire tourner des sites web sur plusieurs ordinateurs qui travaillent en équipe, et faire en sorte que tout se mette à jour tout seul.
 
 Concrètement, On va :
 -Fabriquer des ordinateurs virtuels (avec Vagrant) et les faire travailler en équipe grâce à un outil appelé K3s — un "chef" qui organise le travail entre plusieurs machines.
@@ -1132,3 +1130,109 @@ Pod argocd-server (le vrai programme qui répond)
 
 8080 EST le port sur lequel le tunnel écoute, sur ma machine locale. Le tunnel lui-même redirige ensuite directement vers le port 443 d'Argo CD, dans le cluster.
 en résumé : il n'y a que 2 ports — 8080 (ta machine) et 443 (Argo CD dans le cluster) — reliés directement par UN SEUL tunnel, sans étape intermédiaire supplémentaire.
+-------------------------------------------------
+
+CORRECTION P1
+
+1 - Vérifier la présence et comprendre le contenu du Vagrantfile 
+-> fichier qui decrit et creer automatquement 2 VM avec Vagrant: noleclerS en mode serveur K3s et noleclerSW en mode agent, avec leurs IP fixes, ressources, et un script de provisionning propre a chacune, pour former former un cluster K3s a 2noeuds. 
+
+-> p1/scripts/server.sh (script exécuté automatiquement sur noleclerS : installe K3s en mode serveur, avec une IP fixe et l'interface réseau détectée automatiquement, puis copie le token généré dans le dossier partagé /vagrant pour que l'assistant puisse le récupérer)
+
+-> p1/scripts/worker.sh (script exécuté automatiquement sur noleclerSW : attend que le token du chef apparaisse dans /vagrant, le récupère, puis installe K3s en mode agent en utilisant l'IP du chef + ce token pour rejoindre automatiquement le cluster)
+
+2 - Vérifier qu'il y a bien 2 VM dans le Vagrantfile
+
+3 - Vérifier la dernière version stable de la distribution
+-> onlyoffice/base-debian13 (Debian 13,la box officielle Debian n'a pas les Guest Additions nécessaires au partage de dossier, celle-ci si)
+
+4 - Vérifier l'IP sur l'interface principale, imposée par le sujet 
+-> 192.168.56.110 (noleclerS) 
+-> 192.168.56.111 (noleclerSW)
+
+5 - Vérifier les noms des VM (login + S / SW)
+
+6 - Démarrer et se connecter aux VM
+-> aller dans p1
+-> vagrant up
+-> vagrant ssh noleclerS
+-> vagrant ssh noleclerSW
+
+7 - Vérifier l'IP réelle sur l'interface, avec la commande  ("ip a show $(ip route | grep default | awk '{print $5}')")
+-> vagrant ssh noleclerS -c "ip a show \$(ip route | grep default | awk '{print \$5}')"
+-> vagrant ssh noleclerSW -c "ip a show \$(ip route | grep default | awk '{print \$5}')"
+
+8 - Vérifier le hostname 
+-> vagrant ssh noleclerS -c "hostname"
+-> vagrant ssh noleclerSW -c "hostname"
+
+9 - Vérifier que les deux VM utilisent K3s
+-> vagrant ssh noleclerS -c "sudo systemctl status k3s --no-pager"
+-> vagrant ssh noleclerSW -c "sudo systemctl status k3s-agent --no-pager"
+
+10 - Vérifier que les deux machines forment le même cluster
+-> vagrant ssh noleclerS -c "kubectl get nodes -o wide"
+Explication: le token généré par le server (chef), récupéré automatiquement par worker (l'assistant) via le dossier partagé /vagrant, prouve son droit de rejoindre — c'est cette connexion qui forme le cluster à 2 nœuds.
+
+COMMANDES UTILES EN PLUS 
+vagrant status -> état des 2 VM
+vagrant ssh noleclerS -c "nproc; free -h" -> vérifie 1 CPU / 1024 Mo respectés
+vagrant ssh noleclerS -c "ls -la /vagrant" -> vérifie le dossier partagé (token visible)
+vagrant ssh noleclerS -c "k3s -v" -> version de K3s installée
+
+-----------
+
+CORRECTION P2
+
+1 - Éteindre les autres VM d'abord ("you can of course shut down every other running virtual machines")
+-> cd p1 && vagrant halt
+-> cd ../p2
+
+2 - Vérifier la présence et comprendre le contenu du Vagrantfile 
+
+3 - Vérifier qu'il n'y a qu'1 seule VM
+
+4 - Vérifier la dernière version stable de la distribution
+-> onlyoffice/base-debian13 
+
+5 - Vérifier l'IP sur l'interface principale -> 192.168.56.110
+
+6 - Vérifier le nom de la VM (login + S) 
+
+7 - Fichiers supplémentaires présents, à expliquer
+
+8 - Se connecter à la VM ("Use Vagrant to SSH into the virtual machine")
+-> cd p2
+-> vagrant up
+-> vagrant ssh noleclerS
+
+9 - Vérifier l'IP réelle, avec la commande précise de l'évaluateur
+-> vagrant ssh noleclerS -c "ip a show \$(ip route | grep default | awk '{print \$5}')"
+
+10 - Vérifier le hostname
+-> vagrant ssh noleclerS -c "hostname"
+
+12 - kubectl get nodes -o wide ("It should display the name of the controller and the internal IP address")
+-> vagrant ssh noleclerS -c "kubectl get all"
+
+13 - kubectl get all ("It should display 3 applications")
+-> vagrant ssh noleclerS -c "kubectl get all"
+→ 3 Deployments, 5 Pods (1+3+1), 3 Services — expliquer pourquoi app2 a 3 Pods (réplicas)
+
+14 - Montrer comment fonctionne l'Ingress
+-> kubectl get ingress
+-> kubectl describe ingress apps-ingress
+
+15 - Tester les 3 apps selon le HOST 
+-> curl -H "Host: app1.com" 192.168.56.110
+-> curl -H "Host: app2.com" 192.168.56.110
+-> curl -H "Host: n-importe-quoi.com" 192.168.56.110   # doit tomber sur app3, par défaut
+-> ou via navigateur, après avoir lancé bash scripts/hosts.sh sur IOT
+
+
+COMMANDES UTILES EN PLUS
+vagrant status
+vagrant ssh noleclerS -c "kubectl get deployments"    # vérifier précisément les réplicas d'app2
+vagrant ssh noleclerS -c "kubectl get pods -o wide"    # voir quel pod répond à quelle requête
+
+
