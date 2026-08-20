@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -euo pipefail
+set -euo pipefail
 
 HOST_ENTRY="127.0.0.1 gitlab.k3d.gitlab.com"
 HOSTS_FILE="/etc/hosts"
