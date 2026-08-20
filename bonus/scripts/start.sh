@@ -19,7 +19,7 @@ echo -e "\n\e[32;1mInstallation de GitLab via Helm dans le namespace $GITLAB_NAM
 helm repo add gitlab https://charts.gitlab.io/
 helm repo update
 
-sudo helm upgrade --install gitlab gitlab/gitlab \
+helm upgrade --install gitlab gitlab/gitlab \
   --namespace "$GITLAB_NAMESPACE" \
   --values https://gitlab.com/gitlab-org/charts/gitlab/raw/master/examples/values-minikube-minimum.yaml \
   --set global.hosts.domain=k3d.gitlab.com \
@@ -28,7 +28,7 @@ sudo helm upgrade --install gitlab gitlab/gitlab \
   --timeout 600s
 
 echo -e "\n\e[33mAttente que les pods GitLab soient prêts\e[0m"
-sudo kubectl wait --for=condition=ready --timeout=1200s pod -l app=webservice --namespace "$GITLAB_NAMESPACE"
+kubectl wait --for=condition=ready --timeout=1200s pod -l app=webservice --namespace "$GITLAB_NAMESPACE"
 
 kubectl get secret gitlab-gitlab-initial-root-password \
   --namespace "$GITLAB_NAMESPACE" \
