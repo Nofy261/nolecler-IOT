@@ -10,6 +10,8 @@ global:
   ingress:
     configureCertmanager: false
     class: "nginx"
+  gatewayApi:
+    enabled: false
   hosts:
     domain: 192.168.99.100.nip.io
     externalIP: 192.168.99.100
