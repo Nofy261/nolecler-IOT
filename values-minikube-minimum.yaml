@@ -6,11 +6,12 @@
 # - Configured to use 192.168.99.100, and nip.io for the domain
 
 # Minimal settings
-#test
 global:
   ingress:
     configureCertmanager: false
     class: "nginx"
+  gatewayApi:
+    configureCertmanager: false
   hosts:
     domain: 192.168.99.100.nip.io
     externalIP: 192.168.99.100

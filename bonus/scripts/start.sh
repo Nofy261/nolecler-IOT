@@ -21,7 +21,8 @@ helm repo update
 
 helm upgrade --install gitlab gitlab/gitlab \
   --namespace "$GITLAB_NAMESPACE" \
-  --values https://gitlab.com/gitlab-org/charts/gitlab/raw/master/examples/values-minikube-minimum.yaml \
+#  --values https://gitlab.com/gitlab-org/charts/gitlab/raw/master/examples/values-minikube-minimum.yaml \
+  --values ./values-minikube-minimum.yaml \
   --set global.hosts.domain=k3d.gitlab.com \
   --set global.hosts.externalIP=0.0.0.0 \
   --set global.hosts.https=false \
