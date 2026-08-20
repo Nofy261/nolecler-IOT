@@ -348,7 +348,7 @@ vagrant ssh noleclerS -c "kubectl get nodes -o wide" (verif que le La vm nolecle
 
 vagrant ssh noleclerS -c "kubectl get all" (verif que tous les Pods sont bien crees)
 
-vagrant ssh noleclerS -c "kubectl get ingress"
+vagrant ssh noleclerS -c "kubectl get ingress" A VERIFIER 
 
 Exécuter hosts.sh sur la machine hôte (pas dans la VM !) 
 -> bash ~/Bureau/IOT/p2/scripts/hosts.sh
@@ -1236,3 +1236,9 @@ vagrant ssh noleclerS -c "kubectl get deployments"    # vérifier précisément 
 vagrant ssh noleclerS -c "kubectl get pods -o wide"    # voir quel pod répond à quelle requête
 
 
+------------
+
+Bonus -> script start.sh :
+-> rajouter une verif si le cluster dans lequel on va ajouter gitlab existe est en train de tourner
+P3 : start.sh
+-> Resoudre le probleme de "sg" 
