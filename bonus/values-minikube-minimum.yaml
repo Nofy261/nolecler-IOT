@@ -12,6 +12,8 @@ global:
     class: "nginx"
   gatewayApi:
     enabled: false
+  certmanager-issuer:
+    email: test@example.com
   hosts:
     domain: 192.168.99.100.nip.io
     externalIP: 192.168.99.100
