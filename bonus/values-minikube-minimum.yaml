@@ -12,8 +12,6 @@ global:
     class: "nginx"
   gatewayApi:
     enabled: false
-  certmanager-issuer:
-    email: test@example.com
   hosts:
     domain: 192.168.99.100.nip.io
     externalIP: 192.168.99.100
@@ -25,6 +23,8 @@ global:
     # Configure the clone link in the UI to include the high-numbered NodePort
     # value from below (`gitlab.gitlab-shell.service.nodePort`)
     port: 32022
+certmanager-issuer:
+  email: test@example.com
 # Don't use certmanager, we'll self-sign
 installCertmanager: false
 # Use the `ingress` addon, not our Ingress (can't map 22/80/443)
