@@ -30,9 +30,7 @@ helm template gitlab gitlab/gitlab \
   --set global.hosts.domain=k3d.gitlab.com \
   --set global.hosts.externalIP=0.0.0.0 \
   --set global.hosts.https=false \
-  --set certmanager-issuer.email=test@example.com \
   --timeout 600s \
-> /tmp/gitlab.yaml
 
 echo -e "\n\e[33mAttente que les pods GitLab soient prêts\e[0m"
 kubectl wait --for=condition=ready --timeout=1200s pod -l app=webservice --namespace "$GITLAB_NAMESPACE"
