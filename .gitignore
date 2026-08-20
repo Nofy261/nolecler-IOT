@@ -1,2 +1,5 @@
 .vscode
 box_builder/iso/
+.vagrant/
+token
+*.box
