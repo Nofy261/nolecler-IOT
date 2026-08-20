@@ -30,6 +30,7 @@ helm template gitlab gitlab/gitlab \
   --set global.hosts.domain=k3d.gitlab.com \
   --set global.hosts.externalIP=0.0.0.0 \
   --set global.hosts.https=false \
+  --set certmanager-issuer.email=test@example.com \
   --timeout 600s \
 > /tmp/gitlab.yaml
 
