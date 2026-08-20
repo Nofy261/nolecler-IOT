@@ -12,8 +12,12 @@ else
   printf '%s\n' "$HOST_ENTRY" | sudo tee -a "$HOSTS_FILE"
 fi
 
-echo -e "\n\e[32;1mCreation du namespace $GITLAB_NAMESPACE\e[0m\n"
-kubectl create namespace "$GITLAB_NAMESPACE"
+if kubectl get namespace "$GITLAB_NAMESPACE" >/dev/null 2>&1; then
+    echo "Namespace $GITLAB_NAMESPACE already exists"
+else
+  echo -e "\n\e[32;1mCreation of $GITLAB_NAMESPACE namespace\e[0m\n"
+  kubectl create namespace "$GITLAB_NAMESPACE"
+fi
 
 echo -e "\n\e[32;1mInstallation de GitLab via Helm dans le namespace $GITLAB_NAMESPACE\e[0m\n"
 helm repo add gitlab https://charts.gitlab.io/
