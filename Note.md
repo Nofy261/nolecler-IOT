@@ -149,6 +149,8 @@ vagrant ssh noleclerSW -c "hostname"
 vagrant ssh noleclerS -c "ip a"
 vagrant ssh noleclerSW -c "ip a"
 vagrant ssh noleclerS -c "ls -la /vagrant"
+
+-> Verfier que les deux VMs utlise k3s
 vagrant ssh noleclerS -c "sudo systemctl status k3s --no-pager"
 vagrant ssh noleclerSW -c "sudo systemctl status k3s-agent --no-pager"
 
@@ -1038,6 +1040,33 @@ Dans dockerHub c'est aussi -> wil42/playground Et Montrer le Tags dans dockerHub
 -> git add p3/confs/deployment.yaml
 -> git commit -m "update to v2"
 -> git push
+
+SI PROBLEME ICI : "Empty reply from server" après un changement de version (v1→v2)
+Explication:
+
+Quand Argo CD déploie une nouvelle version de l'application (v1 → v2), Kubernetes ne modifie pas le pod existant — il supprime l'ancien pod et en crée un tout nouveau, avec un nom différent.
+
+Le tunnel qu'on a créé avec kubectl port-forward est connecté à un pod précis, pas à l'application en général. Donc quand l'ancien pod disparaît, le tunnel devient cassé — même s'il continue parfois d'apparaître comme "actif" dans la liste des processus.
+
+Résultat visible : curl http://localhost:8888/ renvoie Empty reply from server, alors que la nouvelle version (v2) tourne bien dans le cluster.
+
+Point important à retenir : ce n'est pas un bug de notre projet — c'est le fonctionnement normal de Kubernetes à chaque redéploiement. Il faut donc relancer le tunnel après chaque changement de version.
+
+16 - Vérifier la synchro avec l'opération donnée en exemple ("Ensure that the application was successfully synchronized using operation given as an example in the subject") -> curl http://localhost:8888/ -> Le resulat doit etre -> {"status":"ok", "message": "v2"}
+
+-> Si erreur = "Empty reply from server"
+
+Le déploiement vers v2 a supprimé l'ancien pod (v1) et en a créé un nouveau (v2) — donc le tunnel port-forward, qui pointait vers l'ancien pod, est maintenant cassé.
+Solution :
+
+    Tuer l'ancien tunnel cassé: -> pkill -f "kubectl port-forward svc/wil-playground"
+
+    Vérifier que le nouveau pod (v2) tourne bien -> kubectl get pods -n dev
+
+    Relancer un tunnel frais qui va automatiquement se connecter au pod actuel (v2) -> kubectl port-forward svc/wil-playground -n dev 8888:8888 &
+
+    Retester -> curl http://localhost:8888/
+
 
 ======================================================================
              BONUS : GITLAB LOCAL
