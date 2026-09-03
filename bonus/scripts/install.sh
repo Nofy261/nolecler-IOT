@@ -8,6 +8,9 @@ echo -e "\n\e[32;1m[Helm Installation]\e[0m\n"
 sleep 1
 curl -fsSL "$HELM_INSTALLER" | bash
 
-git clone "$GITLAB_SCRIPT_FOR_DEPENDENCIES"
-bash ./scripts/dev_dependencies.sh setup
+sudo apt install util-linux-extra
+bash newgrp docker
 
+git clone "$GITLAB_SCRIPT_FOR_DEPENDENCIES"
+chmod 744 ./scripts/dev_dependencies.sh
+bash ./scripts/dev_dependencies.sh setup
