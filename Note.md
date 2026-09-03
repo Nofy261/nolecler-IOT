@@ -1518,3 +1518,65 @@ Bonus -> script start.sh :
 -> rajouter une verif si le cluster dans lequel on va ajouter gitlab existe est en train de tourner
 P3 : start.sh
 -> Resoudre le probleme de "sg" 
+
+--------
+
+
+
+Plan de résolution — Bonus Gitlab (dernière version)
+Contexte du problème
+
+Le chart Helm Gitlab ≥ 10.0 (Gitlab ≥ 19.0) ne fournit plus PostgreSQL, Redis, MinIO automatiquement. Il faut les installer séparément avant Gitlab, via un script officiel (dev_dependencies.sh).
+
+Étape 1 — Installer/vérifier Helm v4+
+bash
+cd ~/Bureau/nolecler-IOT/bonus/scripts
+bash install.sh
+helm version
+
+Objectif : confirmer que Helm est en v4 ou plus. Si c'est une v3, il faudra la mettre à jour (on avisera selon le résultat).
+
+Étape 2 — Récupérer le repo officiel du chart Gitlab
+bash
+cd ~/Bureau
+git clone https://gitlab.com/gitlab-org/charts/gitlab.git gitlab-chart
+cd gitlab-chart
+
+Objectif : ce repo contient le script scripts/dev_dependencies.sh, qu'on ne peut pas obtenir juste avec helm repo add.
+
+Étape 3 — Lancer le script de dépendances externes
+bash
+NAMESPACE=gitlab bash scripts/dev_dependencies.sh setup
+
+Objectif : ça va installer automatiquement Valkey (remplace Redis), CloudNativePG (remplace PostgreSQL), et Garage (remplace MinIO), dans le namespace gitlab. Ça va aussi générer un fichier .values/dev-external.values.yaml avec les infos de connexion à ces nouveaux services.
+
+⚠️ Prérequis : le cluster K3d (iot) et le namespace gitlab doivent déjà exister à ce moment — donc il faut avoir fait tourner cette partie de start.sh en amont (création du cluster + namespaces), avant de lancer cette étape.
+
+Étape 4 — Adapter bonus/scripts/start.sh
+
+Il faudra modifier le script pour :
+
+Créer le cluster + namespaces (comme actuellement)
+Ajouter l'appel à dev_dependencies.sh (étape 3) à ce moment précis, avant d'installer Gitlab
+Modifier la commande d'installation de Gitlab pour combiner :
+Le fichier values-minikube-minimum.yaml existant (replicas réduits, prometheus désactivé, etc.)
+Le nouveau fichier généré .values/dev-external.values.yaml (infos PostgreSQL/Redis/MinIO externes)
+bash
+helm upgrade --install gitlab gitlab/gitlab \
+    --namespace gitlab \
+    --values values-minikube-minimum.yaml \
+    --values /chemin/vers/.values/dev-external.values.yaml \
+    --set global.hosts.domain=k3d.gitlab.com \
+    ...
+Étape 5 — Tester le déploiement Gitlab isolément
+
+Avant de relancer tout le script bonus (Argo CD, app, etc.), on va d'abord valider juste que Gitlab démarre correctement avec cette nouvelle config — pour isoler les problèmes.
+
+Étape 6 — Une fois Gitlab stable, relancer le reste du script tel quel
+
+La suite (Installing Argo CD, update.sh, création de l'app Argo CD) ne devrait pas changer, puisque le problème ne concernait que l'installation de Gitlab lui-même.
+
+Étape 7 — Refaire les tests fonctionnels du sujet de correction
+Créer un repo dans Gitlab (root/test)
+Vérifier sync Argo CD
+Tester v1 → v2 comme en p3
