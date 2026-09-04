@@ -5,7 +5,7 @@ set -euo pipefail
 source config.sh
 
 if [ "$EUID" -eq 0 ]; then
-    echo "Error : do not execute this script with sudo."
+    echo -e "${RED}Error : do not execute this script with sudo.${NC}"
     exit 1
 fi
 
@@ -22,6 +22,7 @@ echo
 echo "=== Check of existing VM ==="
 
 if vagrant status | grep -q "not created"; then
-    echo $GREEN"No VM exist."$NC
+    echo -e "${GREEN}No VM exist.${NC}"
 else
-	echo $RED"At least one VM exists"$NC
+	echo -e "${RED}At least one VM exists.${NC}"
+fi
