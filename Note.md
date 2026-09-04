@@ -1574,3 +1574,35 @@ Vérification finale
 kubectl get ns
 kubectl get pods -A | grep gitlab
 helm list -A
+
+---------
+
+Vendredi 4/09 Debian
+Erreur P1/scripts/install.sh : Virtualbox ne s'installe pas
+
+le paquet VirtualBox n'est pas fourni dans les dépôts officiels de Debian 13.
+
+VirtualBox
+Sur Debian 13 (Trixie), le paquet virtualbox n’est pas disponible directement dans les dépôts Debian standards.
+On utilise donc Debian Fast Track pour obtenir VirtualBox.
+Fast Track
+Fast Track nécessite que le dépôt trixie-backports soit activé.
+On a donc ajouté trixie-backports avant Fast Track.
+
+Donc le chemin est :
+
+Debian 13 (Trixie)
+→ trixie-backports
+→ Fast Track
+→ VirtualBox
+→ Vagrant + VirtualBox prêts pour créer les 2 VM
+
+VirtualBox est installé ✅
+les linux-headers sont installés ✅
+vboxdrv est le module qui permet à VirtualBox de communiquer avec le noyau Linux.
+modprobe vboxdrv → active ce module.
+
+vagrant --version
+VBoxManage --version
+dpkg -l | grep linux-headers -> Tester les headers Linux
+lsmod | grep vbox -> Tester le module VirtualBox
