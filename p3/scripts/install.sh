@@ -4,10 +4,17 @@ set -euo pipefail
 
 # Docker
 sudo apt-get update
+
+#ca-certificates déjà installé dans p1
 sudo apt-get install ca-certificates curl -y
+
 sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+if [ ! -f /etc/apt/keyrings/docker.asc ]; then
+  sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+  -o /etc/apt/keyrings/docker.asc
+  sudo chmod a+r /etc/apt/keyrings/docker.asc
+fi
 
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
