@@ -1,61 +1,51 @@
+GITLAB_PASSWORD=$(sudo kubectl get secret gitlab-gitlab-initial-root-password -n gitlab -o jsonpath="{.data.password}" | base64 -d)
+
+echo "machine gitlab.k3d.gitlab.com
+login root
+password ${GITLAB_PASSWORD}"> ~/.netrc
+
+sudo chmod 600 ~/.netrc
+
+git clone #A remplacer par le vrai repo gitlab gitlab_repo
+git clone https://github.com/Nofy261/nolecler-IOT github_repo
+
+mv github_repo/manifest gitlab_repo/
+rm -rf github_repo/
+
 #!/bin/bash
 set -euo pipefail
 
-GITLAB_NAMESPACE="${GITLAB_NAMESPACE:-gitlab}"
-GITLAB_HOST="${GITLAB_HOST:-gitlab.k3d.gitlab.com}"
-GITLAB_PROJECT="${GITLAB_PROJECT:-root/test}"
-GITLAB_REPO_DIR="${GITLAB_REPO_DIR:-$PWD/gitlab_repo}"
-GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-https://github.com/Nofy261/nolecler-IOT.git}"
-
-command -v git >/dev/null || { echo "git is required" >&2; exit 1; }
-command -v kubectl >/dev/null || { echo "kubectl is required" >&2; exit 1; }
-
+GITLAB_NAMESPACE="gitlab"
 GITLAB_PASSWORD="$(sudo kubectl get secret gitlab-gitlab-initial-root-password \
   --namespace "$GITLAB_NAMESPACE" \
   --output=jsonpath="{.data.password}" | base64 -d)"
-
-if [[ -z "$GITLAB_PASSWORD" ]]; then
-  echo "Could not retrieve the GitLab root password" >&2
-  exit 1
-fi
-
 NETRC_FILE="$HOME/.netrc"
-umask 077
-printf 'machine %s\nlogin root\npassword %s\n' \
-  "$GITLAB_HOST" "$GITLAB_PASSWORD" > "$NETRC_FILE"
 
-WORK_DIR="$(mktemp -d)"
-trap 'rm -rf "$WORK_DIR"' EXIT
+printf 'machine gitlab.k3d.gitlab.com\nlogin root\npassword %s\n' \
+  "$GITLAB_PASSWORD" > "$NETRC_FILE"
+sudo chmod 600 "$NETRC_FILE"
 
-echo "Cloning the source repository"
-git clone --depth 1 "$GITHUB_REPOSITORY" "$WORK_DIR/github_repo"
+git clone #A remplacer par le vrai repo gitlab gitlab_repo
+git clone https://github.com/Nofy261/nolecler-IOT github_repo
 
-SOURCE_MANIFESTS="$WORK_DIR/github_repo/p3/confs"
-if [[ ! -d "$SOURCE_MANIFESTS" ]]; then
-  echo "Manifest directory not found: $SOURCE_MANIFESTS" >&2
-  exit 1
-fi
+mv github_repo/manifest gitlab_repo/
+rm -rf github_repo/
 
-if [[ -d "$GITLAB_REPO_DIR/.git" ]]; then
-  git -C "$GITLAB_REPO_DIR" pull --ff-only
-else
-  GITLAB_REPOSITORY="http://$GITLAB_HOST/$GITLAB_PROJECT.git"
-  git clone "$GITLAB_REPOSITORY" "$GITLAB_REPO_DIR"
-fi
+pushd gitlab_repo >/dev/null
+git config --global user.email "root@root.com"
+git config --global user.name "root"
+git add .
+git commit -m "update the repo"
+git push
+popd >/dev/null
 
-mkdir -p "$GITLAB_REPO_DIR/manifest/app"
-rm -rf "$GITLAB_REPO_DIR/manifest/app"/*
-cp -R "$SOURCE_MANIFESTS"/. "$GITLAB_REPO_DIR/manifest/app/"
+argocd app create wil-playground2 \
+  --repo http://gitlab-webservice-default.gitlab.svc:8181/root/test.git \
+  --path manifest/app \
+  --dest-server https://kubernetes.default.svc \
+  --dest-namespace dev \
+  --project default \
+  --sync-policy automated
 
-git -C "$GITLAB_REPO_DIR" config user.email "root@root.com"
-git -C "$GITLAB_REPO_DIR" config user.name "root"
-git -C "$GITLAB_REPO_DIR" add manifest/app
-
-if git -C "$GITLAB_REPO_DIR" diff --cached --quiet; then
-  echo "GitLab repository is already up to date"
-  exit 0
-fi
-
-git -C "$GITLAB_REPO_DIR" commit -m "Update application manifests"
-git -C "$GITLAB_REPO_DIR" push origin HEAD
-echo "GitLab repository updated successfully"
+kubectl port-forward svc/wil-playground2 8888:8888 \
+  --namespace dev 2>&1 >/dev/null &

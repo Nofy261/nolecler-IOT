@@ -2,4 +2,5 @@
 box_builder/iso/
 .vagrant/
 token
-*.box
+*.boxbonus/gitlab/
+bonus/gitlab_password.txt

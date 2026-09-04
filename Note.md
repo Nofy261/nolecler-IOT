@@ -910,7 +910,17 @@ bash scripts/start.sh
 -> Se connecter à Argo CD, ajouter le repo GitHub
 -> Créer l'Application Argo CD qui va déployer automatiquement wil-playground dans dev
 
-
+k3d cluster list
+kubectl get nodes -o wide -> les noeuds du cluster sont prets
+kubectl get ns  -> verifier les namespaces argo cd et dev
+kubectl get pods -n argocd  -> les pods dans chaque ns concernee
+kubectl get pods -n dev 
+kubectl get all -n dev -> Vue complète des ressources dans dev
+ps aux | grep "port-forward"  -> Les tunnels (port-forward) actifs
+curl -k https://localhost:8080
+curl http://localhost:8888/
+argocd app get wil-playground
+argocd repo list
 
 
 ----------
@@ -1519,64 +1529,48 @@ Bonus -> script start.sh :
 P3 : start.sh
 -> Resoudre le probleme de "sg" 
 
---------
 
+Ce qu'il faut nettoyer, dans l'ordre
 
+1. Helm releases installées par le bonus (namespace gitlab)
 
-Plan de résolution — Bonus Gitlab (dernière version)
-Contexte du problème
-
-Le chart Helm Gitlab ≥ 10.0 (Gitlab ≥ 19.0) ne fournit plus PostgreSQL, Redis, MinIO automatiquement. Il faut les installer séparément avant Gitlab, via un script officiel (dev_dependencies.sh).
-
-Étape 1 — Installer/vérifier Helm v4+
 bash
-cd ~/Bureau/nolecler-IOT/bonus/scripts
-bash install.sh
-helm version
+helm uninstall gitlab -n gitlab
+helm uninstall dev-valkey -n gitlab
+helm uninstall dev-cnpg -n gitlab
+helm uninstall dev-garage -n gitlab
 
-Objectif : confirmer que Helm est en v4 ou plus. Si c'est une v3, il faudra la mettre à jour (on avisera selon le résultat).
+2. Le namespace gitlab lui-même (supprime tout ce qui reste dedans, y compris volumes/secrets/pods)
 
-Étape 2 — Récupérer le repo officiel du chart Gitlab
 bash
-cd ~/Bureau
-git clone https://gitlab.com/gitlab-org/charts/gitlab.git gitlab-chart
-cd gitlab-chart
+kubectl delete namespace gitlab
 
-Objectif : ce repo contient le script scripts/dev_dependencies.sh, qu'on ne peut pas obtenir juste avec helm repo add.
+3. Les CRD installées par CloudNativePG (elles restent même après le helm uninstall, car les CRD sont globales, pas liées à un namespace)
 
-Étape 3 — Lancer le script de dépendances externes
-bash
-NAMESPACE=gitlab bash scripts/dev_dependencies.sh setup
 
-Objectif : ça va installer automatiquement Valkey (remplace Redis), CloudNativePG (remplace PostgreSQL), et Garage (remplace MinIO), dans le namespace gitlab. Ça va aussi générer un fichier .values/dev-external.values.yaml avec les infos de connexion à ces nouveaux services.
+kubectl get crd | grep postgresql
 
-⚠️ Prérequis : le cluster K3d (iot) et le namespace gitlab doivent déjà exister à ce moment — donc il faut avoir fait tourner cette partie de start.sh en amont (création du cluster + namespaces), avant de lancer cette étape.
+Puis supprime celles trouvées (probablement clusters.postgresql.cnpg.io, etc.) :
 
-Étape 4 — Adapter bonus/scripts/start.sh
 
-Il faudra modifier le script pour :
+kubectl delete crd -l app.kubernetes.io/name=cloudnative-pg 2>/dev/null || true
 
-Créer le cluster + namespaces (comme actuellement)
-Ajouter l'appel à dev_dependencies.sh (étape 3) à ce moment précis, avant d'installer Gitlab
-Modifier la commande d'installation de Gitlab pour combiner :
-Le fichier values-minikube-minimum.yaml existant (replicas réduits, prometheus désactivé, etc.)
-Le nouveau fichier généré .values/dev-external.values.yaml (infos PostgreSQL/Redis/MinIO externes)
-bash
-helm upgrade --install gitlab gitlab/gitlab \
-    --namespace gitlab \
-    --values values-minikube-minimum.yaml \
-    --values /chemin/vers/.values/dev-external.values.yaml \
-    --set global.hosts.domain=k3d.gitlab.com \
-    ...
-Étape 5 — Tester le déploiement Gitlab isolément
+4. Le dossier gitlab cloné par install.sh (le repo git cloné dans bonus/scripts/)
 
-Avant de relancer tout le script bonus (Argo CD, app, etc.), on va d'abord valider juste que Gitlab démarre correctement avec cette nouvelle config — pour isoler les problèmes.
 
-Étape 6 — Une fois Gitlab stable, relancer le reste du script tel quel
+rm -rf ~/Bureau/nolecler-IOT/bonus/scripts/gitlab
 
-La suite (Installing Argo CD, update.sh, création de l'app Argo CD) ne devrait pas changer, puisque le problème ne concernait que l'installation de Gitlab lui-même.
+5. La ligne dans /etc/hosts (optionnel, mais propre)
 
-Étape 7 — Refaire les tests fonctionnels du sujet de correction
-Créer un repo dans Gitlab (root/test)
-Vérifier sync Argo CD
-Tester v1 → v2 comme en p3
+
+sudo sed -i '/gitlab.k3d.gitlab.com/d' /etc/hosts
+
+6. Les tunnels port-forward encore actifs
+ps aux | grep "port-forward" -> pour verifier
+
+pkill -f "kubectl port-forward.*gitlab"
+Vérification finale
+
+kubectl get ns
+kubectl get pods -A | grep gitlab
+helm list -A
