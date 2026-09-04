@@ -4,8 +4,9 @@ set -euo pipefail
 
 source config.sh
 
-if [ "$EUID" -ne 0 ]; then
-    exec sudo "$0" "$@"
+if [ "$EUID" -eq 0 ]; then
+    echo "Error : do not execute this script with sudo."
+    exit 1
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
