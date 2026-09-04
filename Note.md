@@ -149,6 +149,8 @@ vagrant ssh noleclerSW -c "hostname"
 vagrant ssh noleclerS -c "ip a"
 vagrant ssh noleclerSW -c "ip a"
 vagrant ssh noleclerS -c "ls -la /vagrant"
+
+-> Verfier que les deux VMs utlise k3s
 vagrant ssh noleclerS -c "sudo systemctl status k3s --no-pager"
 vagrant ssh noleclerSW -c "sudo systemctl status k3s-agent --no-pager"
 
@@ -348,7 +350,7 @@ vagrant ssh noleclerS -c "kubectl get nodes -o wide" (verif que le La vm nolecle
 
 vagrant ssh noleclerS -c "kubectl get all" (verif que tous les Pods sont bien crees)
 
-vagrant ssh noleclerS -c "kubectl get ingress"
+vagrant ssh noleclerS -c "kubectl get ingress" A VERIFIER 
 
 Exécuter hosts.sh sur la machine hôte (pas dans la VM !) 
 -> bash ~/Bureau/IOT/p2/scripts/hosts.sh
@@ -908,7 +910,17 @@ bash scripts/start.sh
 -> Se connecter à Argo CD, ajouter le repo GitHub
 -> Créer l'Application Argo CD qui va déployer automatiquement wil-playground dans dev
 
-
+k3d cluster list
+kubectl get nodes -o wide -> les noeuds du cluster sont prets
+kubectl get ns  -> verifier les namespaces argo cd et dev
+kubectl get pods -n argocd  -> les pods dans chaque ns concernee
+kubectl get pods -n dev 
+kubectl get all -n dev -> Vue complète des ressources dans dev
+ps aux | grep "port-forward"  -> Les tunnels (port-forward) actifs
+curl -k https://localhost:8080
+curl http://localhost:8888/
+argocd app get wil-playground
+argocd repo list
 
 
 ----------
@@ -1038,6 +1050,245 @@ Dans dockerHub c'est aussi -> wil42/playground Et Montrer le Tags dans dockerHub
 -> git add p3/confs/deployment.yaml
 -> git commit -m "update to v2"
 -> git push
+
+SI PROBLEME ICI : "Empty reply from server" après un changement de version (v1→v2)
+Explication:
+
+Quand Argo CD déploie une nouvelle version de l'application (v1 → v2), Kubernetes ne modifie pas le pod existant — il supprime l'ancien pod et en crée un tout nouveau, avec un nom différent.
+
+Le tunnel qu'on a créé avec kubectl port-forward est connecté à un pod précis, pas à l'application en général. Donc quand l'ancien pod disparaît, le tunnel devient cassé — même s'il continue parfois d'apparaître comme "actif" dans la liste des processus.
+
+Résultat visible : curl http://localhost:8888/ renvoie Empty reply from server, alors que la nouvelle version (v2) tourne bien dans le cluster.
+
+Point important à retenir : ce n'est pas un bug de notre projet — c'est le fonctionnement normal de Kubernetes à chaque redéploiement. Il faut donc relancer le tunnel après chaque changement de version.
+
+16 - Vérifier la synchro avec l'opération donnée en exemple ("Ensure that the application was successfully synchronized using operation given as an example in the subject") -> curl http://localhost:8888/ -> Le resulat doit etre -> {"status":"ok", "message": "v2"}
+
+-> Si erreur = "Empty reply from server"
+
+Le déploiement vers v2 a supprimé l'ancien pod (v1) et en a créé un nouveau (v2) — donc le tunnel port-forward, qui pointait vers l'ancien pod, est maintenant cassé.
+Solution :
+
+    Tuer l'ancien tunnel cassé: -> pkill -f "kubectl port-forward svc/wil-playground"
+
+    Vérifier que le nouveau pod (v2) tourne bien -> kubectl get pods -n dev
+
+    Relancer un tunnel frais qui va automatiquement se connecter au pod actuel (v2) -> kubectl port-forward svc/wil-playground -n dev 8888:8888 &
+
+    Retester -> curl http://localhost:8888/
+
+
+======================================================================
+             BONUS : GITLAB LOCAL
+======================================================================
+
+OBJECTIF DU BONUS
+
+Le bonus reprend toute la Partie 3, mais remplace le dépôt GitHub public
+par un dépôt GitLab hébergé localement dans le cluster. GitLab doit donc :
+
+- tourner dans le namespace Kubernetes "gitlab" ;
+- être accessible depuis la machine avec gitlab.k3d.gitlab.com ;
+- contenir le dépôt Git utilisé par Argo CD ;
+- permettre à Argo CD de déployer puis de mettre à jour l'application ;
+- conserver les deux versions de l'application Wil (v1 et v2).
+
+Le dépôt GitLab utilisé par les scripts est par défaut :
+
+  root/test
+
+Il doit être créé une première fois dans l'interface GitLab avec le compte
+root. Le nom du projet peut être changé avec la variable GITLAB_PROJECT.
+
+ARCHITECTURE DU BONUS
+
+  Machine locale
+     |
+     | port-forward 80
+     v
+  GitLab dans le namespace gitlab
+     |
+     | dépôt root/test
+     v
+  Argo CD dans le namespace argocd
+     |
+     | synchronisation automatique
+     v
+  wil-playground dans le namespace dev
+     |
+     | port-forward 8888
+     v
+  http://localhost:8888
+
+Le dépôt GitHub du projet reste la source de départ. Le script
+bonus/scripts/update.sh clone ce dépôt, prend le dossier p3/confs et le
+copie dans manifest/app du dépôt GitLab. Argo CD surveille ensuite
+manifest/app dans GitLab, et non plus p3/confs sur GitHub.
+
+FICHIERS DU BONUS
+
+1. bonus/values-minikube-minimum.yaml
+
+Ce fichier réduit les ressources demandées par GitLab afin qu'il puisse
+fonctionner dans un environnement Minikube/K3d limité. Prometheus et le
+GitLab Runner sont désactivés, et les composants GitLab sont limités à une
+réplique. Les réglages de domaine et d'accès HTTP sont complétés par
+bonus/scripts/start.sh.
+
+2. bonus/scripts/install.sh
+
+Ce script installe Helm, le gestionnaire utilisé pour installer GitLab avec
+le chart officiel gitlab/gitlab. Les outils Docker, K3d, kubectl et le CLI
+Argo CD sont installés par p3/scripts/install.sh, qui doit être exécuté
+avant le bonus.
+
+Commandes d'installation :
+
+  cd p3
+  sudo bash scripts/install.sh
+  cd ../bonus
+  sudo bash scripts/install.sh
+
+3. bonus/scripts/start.sh
+
+Ce script réalise toute la mise en place :
+
+- vérifie que docker, k3d, kubectl, helm, argocd et curl existent ;
+- vérifie que l'utilisateur courant peut utiliser Docker ;
+- ajoute gitlab.k3d.gitlab.com à /etc/hosts ;
+- crée le cluster K3d "iot" s'il n'existe pas ;
+- crée les namespaces argocd, dev et gitlab ;
+- installe ou met à jour GitLab avec Helm ;
+- attend que le webservice GitLab soit prêt ;
+- installe ou met à jour Argo CD dans argocd ;
+- récupère les mots de passe initiaux GitLab et Argo CD depuis les Secrets ;
+- ouvre le port-forward GitLab sur http://gitlab.k3d.gitlab.com ;
+- lance update.sh pour publier les manifests dans GitLab ;
+- ajoute le dépôt GitLab interne à Argo CD ;
+- crée ou met à jour l'application wil-playground ;
+- attend le Deployment dans dev et ouvre localhost:8888.
+
+Lancer le bonus :
+
+  cd bonus
+  bash scripts/start.sh
+
+Le dépôt GitLab doit déjà exister avant cette commande. Pour utiliser un
+autre projet ou un autre hôte :
+
+  GITLAB_PROJECT=root/mon-projet bash scripts/start.sh
+
+4. bonus/scripts/update.sh
+
+Ce script est le pont entre GitHub et GitLab. Il :
+
+- récupère le mot de passe root GitLab depuis le Secret Kubernetes ;
+- crée un fichier ~/.netrc avec des permissions privées ;
+- clone la version actuelle du dépôt GitHub ;
+- vérifie que p3/confs existe ;
+- clone le dépôt GitLab ou met à jour une copie locale existante ;
+- remplace manifest/app par les manifests de p3/confs ;
+- crée un commit uniquement si le contenu a changé ;
+- pousse le commit vers GitLab.
+
+La commande peut être relancée sans créer de commit vide. Les paramètres
+principaux sont configurables :
+
+  GITLAB_PROJECT=root/test
+  GITLAB_REPO_DIR="$PWD/gitlab_repo"
+  GITHUB_REPOSITORY=https://github.com/Nofy261/nolecler-IOT.git
+
+PREUVE DE FONCTIONNEMENT DU BONUS
+
+1. Vérifier que les outils sont disponibles :
+
+  docker --version
+  k3d --version
+  kubectl version --client
+  helm version
+  argocd version --client
+
+2. Vérifier le cluster et les namespaces :
+
+  k3d cluster list
+  kubectl get nodes
+  kubectl get ns
+
+La sortie doit contenir les namespaces argocd, dev et gitlab, ainsi qu'un
+nœud K3d en état Ready.
+
+3. Vérifier les composants :
+
+  kubectl get pods -n gitlab
+  kubectl get pods -n argocd
+  kubectl get pods -n dev
+  argocd app get wil-playground
+
+GitLab et Argo CD peuvent mettre plusieurs minutes à devenir disponibles.
+L'application doit finir avec un état Synced/Healthy dans Argo CD.
+
+4. Vérifier GitLab dans un navigateur :
+
+  http://gitlab.k3d.gitlab.com
+
+Le port-forward GitLab créé par start.sh doit rester actif. Se connecter avec
+root et le mot de passe récupéré avec :
+
+  sudo kubectl get secret gitlab-gitlab-initial-root-password \
+    -n gitlab -o jsonpath="{.data.password}" | base64 -d
+
+5. Vérifier la version v1 :
+
+  curl http://localhost:8888/
+
+La réponse attendue est une réponse JSON contenant le message v1.
+
+6. Vérifier la mise à jour GitOps vers v2 :
+
+- modifier manifest/app/deployment.yaml dans le dépôt GitLab ;
+- remplacer wil42/playground:v1 par wil42/playground:v2 ;
+- faire git add, git commit et git push ;
+- attendre la synchronisation automatique d'Argo CD ;
+- relancer curl http://localhost:8888/.
+
+La réponse doit maintenant contenir le message v2. Aucune commande
+kubectl apply ne doit être exécutée entre le git push et la mise à jour.
+Argo CD détecte le commit GitLab, compare l'état désiré avec le cluster et
+met à jour le Deployment dans dev.
+
+MISE A JOUR DEPUIS GITHUB
+
+Pour republier les manifests actuels de GitHub vers GitLab sans relancer
+toute l'infrastructure :
+
+  cd bonus
+  bash scripts/update.sh
+
+Après le push, Argo CD doit détecter le nouveau commit GitLab et synchroniser
+automatiquement l'application. Le dépôt GitLab est la source observée par
+Argo CD ; GitHub ne sert ici que de dépôt source pour update.sh.
+
+DEPANNAGE RAPIDE
+
+- GitLab ne répond pas : vérifier kubectl get pods -n gitlab et le fichier
+  ~/.gitlab-port-forward.log.
+- Argo CD ne répond pas : vérifier kubectl get pods -n argocd et le fichier
+  ~/.argocd-port-forward.log.
+- Le dépôt GitLab est introuvable : créer root/test dans GitLab ou définir
+  GITLAB_PROJECT avec le bon chemin.
+- L'application n'est pas synchronisée : lancer argocd app get
+  wil-playground puis, uniquement pour diagnostiquer, argocd app sync
+  wil-playground.
+- Le port 8888 est déjà utilisé : arrêter l'ancien port-forward avant de
+  relancer start.sh.
+
+ARRET ET NETTOYAGE
+
+  pkill -f "kubectl port-forward"
+  k3d cluster delete iot
+
+La suppression du cluster supprime les pods et GitLab locaux, mais pas le
+dépôt GitLab lui-même si celui-ci utilise un stockage persistant externe.
 
 15 - Attendre puis Synchro manuelle si besoin ("if synchronizing didn't happen, do it manually in Argo CD")
 -> Reteste si la synchro a fonctionne: curl http://localhost:8888/
@@ -1235,4 +1486,91 @@ vagrant status
 vagrant ssh noleclerS -c "kubectl get deployments"    # vérifier précisément les réplicas d'app2
 vagrant ssh noleclerS -c "kubectl get pods -o wide"    # voir quel pod répond à quelle requête
 
+======================================================================
+          FIN DU BONUS : PARCOURS RAPIDE
+======================================================================
 
+Le bonus remplace la source GitHub de la Partie 3 par un GitLab local.
+GitLab tourne dans le namespace gitlab, Argo CD dans argocd et
+wil-playground dans dev. Le dépôt root/test est synchronisé vers le chemin
+manifest/app, puis Argo CD déploie ce chemin dans dev.
+
+Pour refaire le parcours complet :
+
+  cd p3 && sudo bash scripts/install.sh
+  cd ../bonus && sudo bash scripts/install.sh
+  # créer une fois le projet root/test dans GitLab
+  bash scripts/start.sh
+  kubectl get ns
+  kubectl get pods -n gitlab
+  kubectl get pods -n argocd
+  kubectl get pods -n dev
+  argocd app get wil-playground
+  curl http://localhost:8888/
+
+La première réponse doit être v1. Après modification de
+manifest/app/deployment.yaml dans GitLab, avec commit et push vers v2,
+Argo CD doit synchroniser automatiquement le Deployment. La seconde
+requête curl doit alors retourner v2, sans kubectl apply manuel.
+
+Pour republier les manifests du dépôt GitHub vers GitLab :
+
+  cd bonus
+  bash scripts/update.sh
+
+Les erreurs de prérequis, de secret, de dépôt absent et de synchronisation
+sont arrêtées explicitement par les scripts grâce à set -euo pipefail.
+
+
+------------
+
+Bonus -> script start.sh :
+-> rajouter une verif si le cluster dans lequel on va ajouter gitlab existe est en train de tourner
+P3 : start.sh
+-> Resoudre le probleme de "sg" 
+
+
+Ce qu'il faut nettoyer, dans l'ordre
+
+1. Helm releases installées par le bonus (namespace gitlab)
+
+bash
+helm uninstall gitlab -n gitlab
+helm uninstall dev-valkey -n gitlab
+helm uninstall dev-cnpg -n gitlab
+helm uninstall dev-garage -n gitlab
+
+2. Le namespace gitlab lui-même (supprime tout ce qui reste dedans, y compris volumes/secrets/pods)
+
+bash
+kubectl delete namespace gitlab
+
+3. Les CRD installées par CloudNativePG (elles restent même après le helm uninstall, car les CRD sont globales, pas liées à un namespace)
+
+
+kubectl get crd | grep postgresql
+
+Puis supprime celles trouvées (probablement clusters.postgresql.cnpg.io, etc.) :
+
+
+kubectl delete crd -l app.kubernetes.io/name=cloudnative-pg 2>/dev/null || true
+
+4. Le dossier gitlab cloné par install.sh (le repo git cloné dans bonus/scripts/)
+
+
+rm -rf ~/Bureau/nolecler-IOT/bonus/scripts/gitlab
+
+5. La ligne dans /etc/hosts (optionnel, mais propre)
+
+
+sudo sed -i '/gitlab.k3d.gitlab.com/d' /etc/hosts
+
+6. Les tunnels port-forward encore actifs
+ps aux | grep "port-forward" -> pour verifier
+
+pkill -f "kubectl port-forward.*gitlab"
+Vérification finale
+
+kubectl get ns
+kubectl get pods -A | grep gitlab
+helm list -A

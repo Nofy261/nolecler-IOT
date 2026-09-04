@@ -1,6 +1,27 @@
 #!/bin/bash
 set -euo pipefail
 
+GATEWAY_CRDS=(
+  backendtlspolicies.gateway.networking.k8s.io
+  gatewayclasses.gateway.networking.k8s.io
+  gateways.gateway.networking.k8s.io
+  grpcroutes.gateway.networking.k8s.io
+  httproutes.gateway.networking.k8s.io
+  listenersets.gateway.networking.k8s.io
+  referencegrants.gateway.networking.k8s.io
+  tcproutes.gateway.networking.k8s.io
+  tlsroutes.gateway.networking.k8s.io
+  udproutes.gateway.networking.k8s.io
+  xbackends.gateway.networking.x-k8s.io
+  xbackendtrafficpolicies.gateway.networking.x-k8s.io
+  xmeshes.gateway.networking.x-k8s.io
+)
+
+echo -e "\n\e[33mCleaning up pre-existing Gateway API CRDs to avoid Helm conflicts\e[0m"
+for crd in "${GATEWAY_CRDS[@]}"; do
+  kubectl delete crd "$crd" --ignore-not-found=true
+done
+
 HOST_ENTRY="127.0.0.1 gitlab.k3d.gitlab.com"
 HOSTS_FILE="/etc/hosts"
 GITLAB_NAMESPACE="gitlab"
@@ -41,5 +62,5 @@ kubectl wait --for=condition=ready --timeout=1200s pod -l app=webservice --names
 kubectl get secret gitlab-gitlab-initial-root-password \
   --namespace "$GITLAB_NAMESPACE" \
   --output=jsonpath="{.data.password}" | base64 -d > gitlab_password.txt
-kubectl port-forward svc/gitlab-webservice-default 80:8888 \
-  --namespace "$GITLAB_NAMESPACE" 2>&1 >/dev/null &
+sudo KUBECONFIG="$HOME/.kube/config" kubectl port-forward svc/gitlab-webservice-default 80:8080 \
+    --namespace "$GITLAB_NAMESPACE" 2>&1 >/dev/null &
