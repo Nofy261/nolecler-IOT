@@ -4,8 +4,6 @@ if [ "$EUID" -ne 0 ]; then
   exec sudo "$0" "$@"
 fi
 
-apt update
-
 if [ ! -f /usr/share/keyrings/hashicorp-archive-keyring.gpg ]; then
     wget -O - https://apt.releases.hashicorp.com/gpg | \
         gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
