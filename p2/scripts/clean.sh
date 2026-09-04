@@ -14,7 +14,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR" || exit 1
 
-echo "=== P1 cleaning ==="
+echo "=== P2 cleaning ==="
 
 vagrant destroy -f
 
