@@ -12,5 +12,5 @@ sudo apt install util-linux-extra
 bash newgrp docker
 
 git clone "$GITLAB_SCRIPT_FOR_DEPENDENCIES"
-chmod 744 ./scripts/dev_dependencies.sh
-bash ./scripts/dev_dependencies.sh setup
+chmod 744 /gitlab/scripts/dev_dependencies.sh
+bash ./gitlab/scripts/dev_dependencies.sh setup
