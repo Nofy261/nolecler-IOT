@@ -6,7 +6,7 @@ password ${GITLAB_PASSWORD}"> ~/.netrc
 
 sudo chmod 600 ~/.netrc
 
-git clone #A remplacer par le vrai repo gitlab gitlab_repo
+git clone http://gitlab-webservice-default.gitlab.svc:8181/root/test.git gitlab_repo
 git clone https://github.com/Nofy261/nolecler-IOT github_repo
 
 mv github_repo/manifest gitlab_repo/
@@ -25,7 +25,7 @@ printf 'machine gitlab.k3d.gitlab.com\nlogin root\npassword %s\n' \
   "$GITLAB_PASSWORD" > "$NETRC_FILE"
 sudo chmod 600 "$NETRC_FILE"
 
-git clone #A remplacer par le vrai repo gitlab gitlab_repo
+git clone http://gitlab-webservice-default.gitlab.svc:8181/root/test.git gitlab_repo
 git clone https://github.com/Nofy261/nolecler-IOT github_repo
 
 mv github_repo/manifest gitlab_repo/
