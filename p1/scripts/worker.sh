@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -eo pipefail
+
 IFACE=$(ip -o addr show | awk '$4 ~ /^192.168.56./ {print $2}' | head -1)
 
 while [ ! -f /vagrant/token ]; do

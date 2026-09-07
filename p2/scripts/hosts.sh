@@ -1,5 +1,10 @@
 #!/bin/bash
+set -e
 
-echo "192.168.56.110 app1.com" | sudo tee -a "/etc/hosts"
-echo "192.168.56.110 app2.com" | sudo tee -a "/etc/hosts"
-echo "192.168.56.110 app3.com" | sudo tee -a "/etc/hosts"
+IP=192.168.56.110
+
+for host in app1.com app2.com app3.com; do
+    if ! grep -qF "$host" /etc/hosts; then
+        echo "$IP $host" | sudo tee -a /etc/hosts
+    fi
+done

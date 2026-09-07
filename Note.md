@@ -1602,7 +1602,12 @@ les linux-headers sont installés ✅
 vboxdrv est le module qui permet à VirtualBox de communiquer avec le noyau Linux.
 modprobe vboxdrv → active ce module.
 
+
+-------
+Test a faire apres install.sh de P1 lancer
 vagrant --version
 VBoxManage --version
-dpkg -l | grep linux-headers -> Tester les headers Linux
-lsmod | grep vbox -> Tester le module VirtualBox
+lsmod | grep vboxdrv      # doit afficher -> vboxdrv               704512  2 vboxnetadp,vboxnetflt
+
+
+lsmod | grep kvm          # ne doit RIEN afficher
