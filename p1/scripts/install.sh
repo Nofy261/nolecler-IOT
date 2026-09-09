@@ -2,9 +2,10 @@
 
 set -euo pipefail
 
+chmod +x "$0"
 #Relance le script en root si ce n'est pas deja le cas
 if [ "$EUID" -ne 0 ]; then
-    exec sudo "$0" "$@"
+    exec sudo "$0"
 fi
 
 export DEBIAN_FRONTEND=noninteractive
