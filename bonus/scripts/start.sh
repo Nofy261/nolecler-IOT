@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Dossier bonus/ (le script vit dans bonus/scripts/)
+BONUS_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
 GATEWAY_CRDS=(
   backendtlspolicies.gateway.networking.k8s.io
   gatewayclasses.gateway.networking.k8s.io
@@ -46,8 +49,8 @@ helm repo update
 
 helm upgrade --install gitlab gitlab/gitlab \
   --namespace "$GITLAB_NAMESPACE" \
-  --values https://gitlab.com/gitlab-org/charts/gitlab/raw/master/examples/values-minikube-minimum.yaml \
-  --values ./gitlab/.values/dev-external.values.yaml  \
+  --values "$BONUS_DIR/values-minikube-minimum.yaml" \
+  --values "$BONUS_DIR/gitlab/.values/dev-external.values.yaml" \
   --set global.hosts.domain=k3d.gitlab.com \
   --set global.hosts.externalIP=0.0.0.0 \
   --set global.hosts.https=false \

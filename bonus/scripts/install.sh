@@ -10,6 +10,10 @@ curl -fsSL "$HELM_INSTALLER" | bash
 
 sudo apt install -y util-linux-extra
 
-git clone "$GITLAB_SCRIPT_FOR_DEPENDENCIES"
+if [ -d gitlab ]; then
+  echo "Le dossier gitlab/ existe deja, clonage ignore"
+else
+  git clone "$GITLAB_SCRIPT_FOR_DEPENDENCIES"
+fi
 chmod 744 gitlab/scripts/dev_dependencies.sh
 NAMESPACE=gitlab bash gitlab/scripts/dev_dependencies.sh setup

@@ -1643,3 +1643,11 @@ kubectl get all -n dev (P3)
 
 !!!!!
 newgrp docker --> pour regler le probleme de group docker
+
+------
+
+Avant de passer au bonus , liberer le port 8888(l'app p3) car l ebonus le reutilise pour 
+wil-playground2  
+---> pkill -f "port-forward.*8888"
+ -> Garder le port-forward 8080 vivant (Argo CD) : les commandes argocd du bonus en ont besoin. Ne pas le tuer.
+
