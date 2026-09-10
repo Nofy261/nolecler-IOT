@@ -1611,3 +1611,24 @@ lsmod | grep vboxdrv      # doit afficher -> vboxdrv               704512  2 vbo
 
 
 lsmod | grep kvm          # ne doit RIEN afficher
+---------
+
+BONUS: update.sh 
+
+les étapes de update.sh:
+
+Récupérer le mot de passe de GitLab (celui généré automatiquement à son installation).
+
+Préparer l'authentification : écrire ce mot de passe dans un fichier spécial (~/.netrc) pour que git puisse se connecter à GitLab tout seul, sans redemander de mot de passe.
+
+Cloner les deux repos : celui de GitLab (vide au départ) et celui de GitHub (qui contient les vrais fichiers de config).
+
+Copier le dossier de config (p3/confs, actuellement mal référencé comme "manifest") depuis GitHub vers le clone de GitLab.
+
+Renommer l'application à l'intérieur des fichiers copiés (wil-playground → wil-playground2) — pour éviter le conflit avec celle de p3. (étape actuellement manquante)
+
+Envoyer sur GitLab : donner une identité à Git, puis add/commit/push les fichiers copiés vers le repo GitLab.
+
+Brancher Argo CD : créer une deuxième "Application" Argo CD, qui dit "surveille ce repo GitLab, ce dossier précis, déploie vers dev".
+
+Ouvrir le tunnel de test : port-forward vers cette nouvelle appli, pour pouvoir la tester avec curl comme en p3.

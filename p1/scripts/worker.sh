@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eo pipefail
+set -euo pipefail
 
 IFACE=$(ip -o addr show | awk '$4 ~ /^192.168.56./ {print $2}' | head -1)
 

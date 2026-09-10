@@ -1,5 +1,7 @@
 #!/bin/bash
 
+chmod +x "$0"
+
 echo -e "\nChecking docker group membership...\n"
 if ! groups | grep -q '\bdocker\b'; then
   echo -e "\nAdding $USER to the docker group...\n"
