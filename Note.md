@@ -1638,3 +1638,8 @@ Ouvrir le tunnel de test : port-forward vers cette nouvelle appli, pour pouvoir 
 vagrant destroy -f -> supprime la VM (P2)
 
 kubectl get all -n dev (P3)
+
+----
+
+!!!!!
+newgrp docker --> pour regler le probleme de group docker
