@@ -1632,3 +1632,9 @@ Envoyer sur GitLab : donner une identité à Git, puis add/commit/push les fichi
 Brancher Argo CD : créer une deuxième "Application" Argo CD, qui dit "surveille ce repo GitLab, ce dossier précis, déploie vers dev".
 
 Ouvrir le tunnel de test : port-forward vers cette nouvelle appli, pour pouvoir la tester avec curl comme en p3.
+
+-------
+
+vagrant destroy -f -> supprime la VM (P2)
+
+kubectl get all -n dev (P3)
