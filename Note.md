@@ -1651,3 +1651,26 @@ wil-playground2
 ---> pkill -f "port-forward.*8888"
  -> Garder le port-forward 8080 vivant (Argo CD) : les commandes argocd du bonus en ont besoin. Ne pas le tuer.
 
+-------
+
+CONNEXION GITLAB
+
+Ouvrir http://gitlab.k3d.gitlab.com → page de connexion
+Se connecter avec root + le mot de passe (bonus/gitlab_password.txt)
+Ne pas suivre l'écran d'onboarding "créer un groupe" s'il apparaît
+Aller directement sur http://gitlab.k3d.gitlab.com/projects/new (taper l'URL, ou + → New project/repository → Create blank project)
+Choisir « Create blank project », namespace = root, nom = test, décocher le README
+Créer
+
+
+--------
+Dans BONUS , pour le test de v1 a v2 :
+
+Resoudre l'erreur de la meme maniere dans p3 
+
+kubectl get pods -n dev
+pkill -f "port-forward.*8889"
+kubectl port-forward svc/wil-playground2 -n dev 8889:8888 >/dev/null 2>&1 &
+sleep 2
+curl http://localhost:8889/
+Si le probleme persite : retente curl http://localhost:8889/

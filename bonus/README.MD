@@ -355,3 +355,61 @@ Arreter l'ancien port-forward, puis relancer `start.sh` :
 pkill -f "kubectl port-forward"
 bash scripts/start.sh
 ```
+-------------------
+
+## Fonctionnement reel des scripts
+
+Les sections precedentes decrivent l'intention d'origine du bonus. En
+pratique, le travail est reparti differemment entre p3 et le bonus :
+
+- **`p3/scripts/start.sh`** cree le cluster K3d `iot`, installe Argo CD et
+  deploie l'application `wil-playground` (source : le depot GitHub) sur le
+  port local `8888`. Il doit tourner **avant** le bonus et rester actif : le
+  bonus ne recree pas le cluster.
+- **`bonus/scripts/start.sh`** ajoute uniquement GitLab par-dessus : namespace
+  `gitlab`, installation via Helm, attente que GitLab soit pret, tunnel sur le
+  port local `80`. Il ne touche ni au cluster, ni a Argo CD, ni a l'app
+  `wil-playground` de p3, et ne lance pas `update.sh` automatiquement.
+- **`bonus/scripts/update.sh`** ne remplace pas l'application `wil-playground`
+  existante : il cree une **deuxieme** application Argo CD, `wil-playground2`,
+  dont la source est le depot GitLab (`root/test`) au lieu de GitHub, avec son
+  propre tunnel sur le port local `8889` (pour eviter tout conflit avec le
+  `8888` de p3).
+
+Le depot `root/test` doit etre cree a la main dans GitLab avant de lancer
+`update.sh` (voir "Preparation du depot GitLab" plus haut), avec une
+visibilite **Public** : `update.sh` ne fait pas `argocd repo add`, Argo CD
+doit donc pouvoir lire ce depot sans identifiants.
+
+La demonstration v1 -> v2 se fait en modifiant `confs/deployment.yaml`
+**directement dans l'interface GitLab** (Edit -> Commit changes), pas en
+relancant `update.sh` : celui-ci recopie toujours l'etat courant de GitHub,
+qui reste en `v1`, et ecraserait donc le changement.
+
+### Bug corrige : mauvais port pour le tunnel GitLab
+
+Le service `gitlab-webservice-default` expose plusieurs ports : `8080`
+(Rails/Puma direct) et `8181` (Workhorse, le proxy qui sait aussi servir les
+fichiers statiques du site). Le tunnel doit cibler **8181**, pas 8080. Avec
+8080, la page de connexion GitLab restait bloquee sur "Chargement en cours"
+car les fichiers `.js`/`.css` etaient systematiquement redirige vers
+`/users/sign_in` au lieu d'etre servis.
+
+### Piege : Garage n'a pas de stockage persistant
+
+Le script `gitlab/scripts/dev_dependencies.sh` installe Garage (stockage S3)
+avec `persistence.enabled=false`. Consequence : un `k3d cluster stop` /
+`k3d cluster start` fait perdre toutes les donnees de Garage (buckets, cles,
+mot de passe d'acces) sans le signaler, ce qui casse ensuite le pod
+`gitlab-registry` (erreur `AccessDenied ... No such key`). **Ne pas arreter le
+cluster K3d une fois le bonus installe** ; en cas de besoin, reinitialiser
+Garage avec :
+
+```bash
+helm uninstall dev-garage -n gitlab
+kubectl delete secret dev-garage-gitlab-object-storage \
+  dev-garage-gitlab-object-storage-s3cmd dev-garage-gitlab-registry-storage \
+  -n gitlab --ignore-not-found
+NAMESPACE=gitlab bash gitlab/scripts/dev_dependencies.sh setup
+bash scripts/start.sh
+```
