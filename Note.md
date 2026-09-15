@@ -1526,8 +1526,7 @@ sont arrêtées explicitement par les scripts grâce à set -euo pipefail.
 
 Bonus -> script start.sh :
 -> rajouter une verif si le cluster dans lequel on va ajouter gitlab existe est en train de tourner
-P3 : start.sh
--> Resoudre le probleme de "sg" 
+ 
 
 
 Ce qu'il faut nettoyer, dans l'ordre
@@ -1646,7 +1645,7 @@ newgrp docker --> pour regler le probleme de group docker
 
 ------
 
-Avant de passer au bonus , liberer le port 8888(l'app p3) car l ebonus le reutilise pour 
+Avant de passer au bonus , liberer le port 8888(l'app p3) car le bonus le reutilise pour 
 wil-playground2  
 ---> pkill -f "port-forward.*8888"
  -> Garder le port-forward 8080 vivant (Argo CD) : les commandes argocd du bonus en ont besoin. Ne pas le tuer.
