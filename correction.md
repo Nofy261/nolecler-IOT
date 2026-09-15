@@ -204,7 +204,57 @@ kubectl get deploy wil-playground -n dev -o jsonpath='{.spec.template.spec.conta
 -> Montrer dans l'interface de Argocd le changement
 ---------------
 
+BONUS
 
+GitLab n'embarque plus Postgres/Redis/MinIO par défaut pour un usage local léger — il faut fournir ces 3 dépendances soi-même en externe. Le script dev_dependencies.sh, fourni par GitLab, les installe automatiquement : Valkey (cache), CloudNativePG (base de données), Garage (stockage S3). 
+
+install.sh: installe Helm (l'outil) et les 3 services nécessaires : Valkey, CloudNativePG, Garage. GitLab lui-même n'est pas encore installé à ce stade. 
+
+start.sh: installe réellement GitLab (via Helm), connecté aux 3 services préparés par install.sh (Valkey, CNPG, Garage). Il attend que GitLab soit prêt, récupère le mot de passe root, puis ouvre un tunnel (port 80 → 8181) pour y accéder depuis le navigateur.
+
+-------
+
+Procédure générale de dépannage tunnel
+1. Vérifier que le pod visé est sain : 
+kubectl get pods -n <namespace>
+
+→ doit être Running, 1/1 ou 2/2. Si Pending/Error/CrashLoopBackOff, le problème est le pod, pas le tunnel — inutile de toucher au tunnel avant d'avoir réglé ça.
+
+2. Vérifier si un tunnel tourne déjà :
+ps aux | grep "port-forward" | grep -v grep
+
+
+3. Tuer l'ancien tunnel (il pointe probablement vers un pod mort) :
+pkill -f "port-forward.*<port_local>"
+
+4. Relancer un tunnel neuf: 
+kubectl port-forward svc/<nom-service> -n <namespace> <port_local>:<port_distant> &
+
+
+5. Laisser une seconde s'établir, puis tester : 
+sleep 2
+curl <protocole>://localhost:<port_local>/
+
+---------
+Application concrète — Argo CD
+
+kubectl get pods -n argocd --------
+ps aux | grep "port-forward" | grep -v grep --------
+pkill -f "port-forward.*8080" ---------
+kubectl port-forward svc/argocd-server -n argocd 8080:443 & -----------
+sleep 2 --------
+curl -k https://localhost:8080/ -----------
+
+******
+
+Application concrète — App de Wil (p3)
+
+kubectl get pods -n dev ------
+ps aux | grep "port-forward" | grep -v grep -------
+pkill -f "port-forward.*8888" --------
+kubectl port-forward svc/wil-playground -n dev 8888:8888 & --------
+sleep 2 ---------
+curl http://localhost:8888/
 
 
 
