@@ -28,14 +28,14 @@ fi
 if kubectl get ns | grep -q '^argocd[[:space:]]'; then
   echo -e "${GREEN}\nNamespace 'argocd' already exists.${NC}"
 else
-	echo -e "${BLUE}\nAdding the namespace 'argocd' ..."
+	echo -e "${BLUE}\nAdding the namespace 'argocd' ...${NC}"
   kubectl create namespace argocd
 fi
 
 if kubectl get ns | grep -q 'dev[[:space:]]'; then
   echo -e "${GREEN}\nNamespace 'dev' already exists.${NC}"
 else
-	echo -e "${BLUE}\nAdding the namespace 'dev' ..."
+	echo -e "${BLUE}\nAdding the namespace 'dev' ...${NC}"
   kubectl create namespace dev
 fi
 
