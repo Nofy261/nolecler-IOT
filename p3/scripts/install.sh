@@ -24,7 +24,7 @@ sudo chmod a+r /etc/apt/keyrings/docker.asc
 # Add Docker repo 
 echo -e "${BLUE}\nConfigure the Docker repository in APT ...${NC}"
 echo \
-  "deb [arch=${BLUE} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt-get update -y
