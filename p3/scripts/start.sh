@@ -17,7 +17,7 @@ else
 fi
 
 # Check if cluster iot exists, otherwise create it 
-if k3d cluster get iot >/dev/null 2>$1; then
+if k3d cluster list | grep -q '^iot[[:space:]]'; then
 	echo -e "${GREEN}\nCluster 'iot' already exists.${NC}"
 else
 	echo -e "${BLUE}\nCreating the cluster 'iot' ..."
