@@ -2,32 +2,38 @@
 
 set -euo pipefail
 
-# Docker
+# Tools install
 sudo apt-get update
 sudo apt-get install ca-certificates curl netcat-openbsd -y
 sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 
+# Get CPU architecture
+ARCH=$(dpkg --print-architecture)
+
+# Download GPG Docker key
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
 
+# Add Docker repo 
 echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+  "deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt-get update -y
 
+# Docker installation
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
-# K3d
+# K3d installation
 curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 
-# kubectl
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+# kubectl installation
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl"
 chmod +x kubectl
 sudo mv kubectl /usr/local/bin/
 
-# argocd CLI
+# Argo CD CLI installation
 VERSION=$(curl -s https://api.github.com/repos/argoproj/argo-cd/releases/latest | grep tag_name | cut -d '"' -f 4)
-curl -sSL -o argocd "https://github.com/argoproj/argo-cd/releases/download/$VERSION/argocd-linux-amd64"
+curl -sSL -o argocd "https://github.com/argoproj/argo-cd/releases/download/${VERSION}/argocd-linux-${ARCH}"
 chmod +x argocd
 sudo mv argocd /usr/local/bin/
