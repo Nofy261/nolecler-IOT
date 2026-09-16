@@ -3,6 +3,7 @@
 set -euo pipefail
 
 # Tools install
+echo -e "/nInstalling tools .../n"
 sudo apt-get update
 sudo apt-get install ca-certificates curl netcat-openbsd -y
 sudo install -m 0755 -d /etc/apt/keyrings
@@ -11,6 +12,7 @@ sudo install -m 0755 -d /etc/apt/keyrings
 ARCH=$(dpkg --print-architecture)
 
 # Download GPG Docker key
+echo -e "/nDownloading Docker GPG key .../n"
 sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
 
