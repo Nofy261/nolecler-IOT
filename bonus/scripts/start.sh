@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# Dossier bonus/ (le script vit dans bonus/scripts/)
 BONUS_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 GATEWAY_CRDS=(

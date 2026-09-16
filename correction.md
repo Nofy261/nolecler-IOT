@@ -206,11 +206,79 @@ kubectl get deploy wil-playground -n dev -o jsonpath='{.spec.template.spec.conta
 
 BONUS
 
-GitLab n'embarque plus Postgres/Redis/MinIO par défaut pour un usage local léger — il faut fournir ces 3 dépendances soi-même en externe. Le script dev_dependencies.sh, fourni par GitLab, les installe automatiquement : Valkey (cache), CloudNativePG (base de données), Garage (stockage S3). 
+GitLab n'embarque plus Postgres/Redis/MinIO par défaut pour un usage local léger — il faut fournir ces 3 dépendances soi-même en externe. Le script dev_dependencies.sh, fourni par GitLab, les installe automatiquement : Valkey (cache), CloudNativePG (base de données), Garage (stockage S3).
 
-install.sh: installe Helm (l'outil) et les 3 services nécessaires : Valkey, CloudNativePG, Garage. GitLab lui-même n'est pas encore installé à ce stade. 
+install.sh: installe l'outil Helm, qui sert à déployer GitLab dans Kubernetes. Il installe aussi util-linux-extra (dépendance système mineure, rôle précis inconnu). Il clone ensuite le dépôt des charts GitLab (protégé contre une relance) et exécute dev_dependencies.sh, qui installe les 3 services nécessaires (Valkey, CloudNativePG, Garage) dans le namespace gitlab. 
 
-start.sh: installe réellement GitLab (via Helm), connecté aux 3 services préparés par install.sh (Valkey, CNPG, Garage). Il attend que GitLab soit prêt, récupère le mot de passe root, puis ouvre un tunnel (port 80 → 8181) pour y accéder depuis le navigateur.
+start.sh:
+Avant d'installer GitLab, on efface d'anciennes règles réseau qui pourraient déjà exister dans le système, pour éviter que GitLab ne se bloque en voulant poser ses propres règles par-dessus des anciennes incompatibles. 
+(On supprime d'anciens CRD réseau pour éviter un conflit avec la nouvelle installation de GitLab, qui peut contenir ces mêmes CRD. )
+
+On ajoute une entrée dans le fichier /etc/hosts qui associe une adresse IP (127.0.0.1) à un nom local (gitlab.k3d.gitlab.com).
+/etc/hosts est un fichier qui contient des correspondances entre des adresses IP et des noms locaux, utilisées avant d'aller chercher sur Internet. 
+
+values-minikube-minimum.yaml → un fichier copié depuis GitLab (exemple officiel), pour réduire les ressources de GitLab lui-même.
+dev_dependencies.sh → un script, récupéré dans le dépôt des charts GitLab, qui installe les 3 services nécessaires.
+dev-external.values.yaml → un fichier généré par le script dev_dependencies.sh, qui contient les infos (noms de secrets) pour connecter les 3 services à GitLab.
+
+helm repo add enregistre le dépôt de charts. helm repo update rafraîchit le catalogue de tous les dépôts (pas GitLab lui-même). helm upgrade --install est la seule ligne qui touche réellement à GitLab — elle l'installe ou le met à jour selon son état actuel. 
+
+On désactive la Gateway API pour cette installation, mais d'anciens CRD liés à cette fonctionnalité pourraient traîner d'une fois précédente où elle était activée — donc on les supprime d'abord, pour que le "désactivé maintenant" ne rentre pas en conflit avec un "activé avant" (ligne 57)
+
+Kubernetes stocke les secrets encodés en base64 (pas chiffrés, juste encodés). base64 -d décode cette valeur pour retrouver le vrai mot de passe lisible.
+
+start.sh: installe réellement GitLab (via Helm), connecté aux 3 services préparés par install.sh (Valkey, CNPG, Garage). Il attend que GitLab soit prêt, récupère le mot de passe root, puis ouvre un tunnel (port 80 → 8181) pour y accéder depuis le navigateur.  
+
+---
+
+update.sh:
+On prépare des variables : le namespace, le mot de passe GitLab (récupéré en direct depuis le cluster), et le chemin d'un fichier à créer plus loin.
+
+On écrit les identifiants dans le fichier standard .netrc, que Git lit automatiquement pour s'authentifier sans demander de mot de passe, puis on verrouille ce fichier pour protéger sa confidentialité.
+
+Si la copie locale du dépôt GitLab existe déjà, on la met à jour (pull) ; sinon, on la clone pour la première fois.
+
+--------
+
+
+Bonne question, la vraie solution robuste (comme celles qu'on a déjà ajoutées ailleurs) serait de tuer l'ancien tunnel avant d'en ouvrir un nouveau, systématiquement — pour être sûr d'avoir un tunnel frais et fonctionnel, plutôt que de risquer un conflit.
+
+Correctif proposé pour les 2 lignes de p3/scripts/start.sh :
+
+
+pkill -f "port-forward.*8080:443" 2>/dev/null || true
+kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+et pareil pour l'app :
+
+
+pkill -f "port-forward.*8888:8888" 2>/dev/null || true
+kubectl port-forward svc/wil-playground -n dev 8888:8888 2>&1 >/dev/null &
+Pourquoi c'est la bonne approche : on ne "devine" pas si l'ancien tunnel marche encore bien — on le tue systématiquement et on en ouvre un garanti neuf, exactement le réflexe qu'on a pratiqué plusieurs fois à la main pendant tes révisions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 -------
 
