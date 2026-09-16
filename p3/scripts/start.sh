@@ -1,13 +1,19 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+source "${SCRIPT_DIR}/config.sh"
+
 chmod +x "$0"
 
-echo -e "\nChecking docker group membership...\n"
+# Check if user is member of Docker group and add if necessary
 if ! groups | grep -q '\bdocker\b'; then
-  echo -e "\nAdding $USER to the docker group...\n"
+  echo -e "${BLUE}\nAdding $USER to the docker group ...${NC}"
   sudo usermod -aG docker "$USER"
-  echo -e "\nRe-executing script with docker group active...\n"
+  echo -e "${BLUE}\nRe-executing script with docker group active ...${NC}"
   exec sudo -u "$USER" -g docker "$0" "$@"
+else
+  echo -e "${GREEN}\nUser already belongs to Docker group ${NC}"
 fi
 
 echo -e "\nCreating the cluster\n"
