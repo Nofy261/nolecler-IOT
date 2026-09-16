@@ -7,18 +7,24 @@ source "${SCRIPT_DIR}/config.sh"
 chmod +x "$0"
 
 # Check if user is member of Docker group and add if necessary
-if ! groups | grep -q '\bdocker\b'; then
-  echo -e "${BLUE}\nAdding $USER to the docker group ...${NC}"
-  sudo usermod -aG docker "$USER"
-  echo -e "${BLUE}\nRe-executing script with docker group active ...${NC}"
-  exec sudo -u "$USER" -g docker "$0" "$@"
+if groups | grep -q '\bdocker\b'; then
+	echo -e "${GREEN}\nUser already belongs to Docker group ${NC}"
 else
-  echo -e "${GREEN}\nUser already belongs to Docker group ${NC}"
+	echo -e "${BLUE}\nAdding $USER to the docker group ...${NC}"
+	sudo usermod -aG docker "$USER"
+	echo -e "${BLUE}\nRe-executing script with docker group active ...${NC}"
+	exec sudo -u "$USER" -g docker "$0" "$@"
 fi
 
-echo -e "\nCreating the cluster\n"
-k3d cluster create iot
+# Check if cluster iot exists, otherwise create it 
+if k3d cluster get iot >/dev/null 2>$1; then
+	echo -e "${GREEN}\nCluster 'iot' already exists.${NC}"
+else
+	echo -e "${BLUE}\nCreating the cluster 'iot' ..."
+	k3d cluster create iot
+fi
 
+# Check if namespaces exist, otherwise create them
 echo -e "\nAdding the namespaces\n"
 kubectl create namespace argocd
 kubectl create namespace dev
