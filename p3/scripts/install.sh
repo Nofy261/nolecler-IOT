@@ -9,7 +9,7 @@ source "${SCRIPT_DIR}/config.sh"
 # Tools install
 echo -e "${BLUE}\nInstalling tools ...${NC}"
 sudo apt-get update
-sudo apt-get install ca-certificates curl netcat-openbsd -y
+sudo apt-get install ca-certificates curl netcat-openbsd lsof -y
 sudo install -m 0755 -d /etc/apt/keyrings
 
 # Get CPU architecture

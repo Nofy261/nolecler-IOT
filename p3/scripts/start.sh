@@ -25,29 +25,47 @@ else
 fi
 
 # Check if namespaces exist, otherwise create them
-echo -e "\nAdding the namespaces\n"
-kubectl create namespace argocd
-kubectl create namespace dev
+if kubectl get ns | grep -q '^argocd[[:space:]]'; then
+  echo -e "${GREEN}\nNamespace 'argocd' already exists.${NC}"
+else
+	echo -e "${BLUE}\nAdding the namespace 'argocd' ..."
+  kubectl create namespace argocd
+fi
 
-echo -e "\nInstalling Argo CD in its namespace\n"
+if kubectl get ns | grep -q 'dev[[:space:]]'; then
+  echo -e "${GREEN}\nNamespace 'dev' already exists.${NC}"
+else
+	echo -e "${BLUE}\nAdding the namespace 'dev' ..."
+  kubectl create namespace dev
+fi
+
+echo -e "${BLUE}\nInstalling Argo CD in its namespace ...${NC}"
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-echo -e "\nWaiting for argocd-server availability...\n"
+echo -e "${BLUE}\nWaiting for argocd-server availability ...${NC}\n"
 kubectl wait --for=condition=available --timeout=180s deployment.apps/argocd-server -n argocd
 
 while ! kubectl -n argocd get secret argocd-initial-admin-secret &> /dev/null; do
-  echo -e "\nWaiting for argocd initial admin secret...\n"
+  echo -e "${BLUE}\nWaiting for argocd initial admin secret ...${NC}"
   sleep 3
 done
 
 ARGOCD_PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
 
-echo -e "\nPort-forwarding to ArgoCD's API...\n"
-kubectl port-forward svc/argocd-server -n argocd 8080:443 &
-
-while ! nc -z localhost 8080; do
-  sleep 1
-done
+echo -e "${BLUE}\nPort-forwarding to ArgoCD's API ...${NC}"
+if nc -z localhost 8080; then
+  if lsof -i :8080 | grep -q 'kubectl'; then
+    echo "Argo CD port-forward is already running."
+  else
+    echo "Port 8080 is already used by another process."
+    exit 1
+  fi
+else
+  kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+  while ! nc -z localhost 8080; do
+    sleep 1
+  done
+fi
 
 echo -e "\nLogging into Argo CD\n"
 argocd login localhost:8080 --username admin --password "$ARGOCD_PASS" --insecure
