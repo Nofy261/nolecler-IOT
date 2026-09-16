@@ -55,9 +55,9 @@ ARGOCD_PASS=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpa
 echo -e "${BLUE}\nPort-forwarding to ArgoCD's API ...${NC}"
 if nc -z localhost 8080; then
   if lsof -i :8080 | grep -q 'kubectl'; then
-    echo "Argo CD port-forward is already running."
+    echo -e "${GREEN}\nArgo CD port-forward is already running.${NC}"
   else
-    echo "Port 8080 is already used by another process."
+    echo -e "${RED}\nPort 8080 is already used by another process.${NC}"
     exit 1
   fi
 else
@@ -89,5 +89,13 @@ done
 echo -e "\nWaiting for wil-playground deployment...\n"
 kubectl wait --for=condition=available --timeout=120s deployment/wil-playground -n dev
 
-echo -e "\nPort-forwarding to the app\n"
-kubectl port-forward svc/wil-playground -n dev 8888:8888 2>&1 >/dev/null &
+echo -e "${BLUE}\nPort-forwarding to the app ...${NC}"
+if nc -z localhost 8888; then
+	if lsof -i :8888 | grep -q 'kubectl'; then
+			echo -e "${GREEN}\nApp port-forward is already running.${NC}"
+	else
+		echo -e "${RED}\nPort 8888 is already used by another process.${NC}"
+		exit 1
+	fi
+else kubectl port-forward svc/wil-playground -n dev 8888:8888 2>&1 >/dev/null &
+fi
