@@ -17,6 +17,8 @@ cd "$PROJECT_DIR" || exit 1
 echo "=== P1 cleaning ==="
 vagrant destroy -f
 
+rm -f token
+
 echo
 echo "=== Checking for remaining VMs ==="
 if vagrant status | grep -qE 'running|poweroff|saved|aborted'; then
