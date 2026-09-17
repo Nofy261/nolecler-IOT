@@ -3,18 +3,19 @@
 set -euo pipefail
 
 chmod +x "$0"
-#Relance le script en root si ce n'est pas deja le cas
+
+# Restart the script as root if needed
 if [ "$EUID" -ne 0 ]; then
     exec sudo "$0"
 fi
 
 export DEBIAN_FRONTEND=noninteractive
 
-# Outils de base parfois absents d'une installation Debian minimale (netinst)
+# Install basic tools often missing from a minimal Debian (netinst) installation
 apt-get update
 apt-get install -y ca-certificates curl gnupg
 
-# Depot HashiCorp : fournit Vagrant 2.4.x (necessaire pour VirtualBox 7.2)
+# Add HashiCorp repository: provides Vagrant 2.4.x (required for VirtualBox 7.2)
 install -d -m 0755 /usr/share/keyrings
 curl -fsSL https://apt.releases.hashicorp.com/gpg \
     | gpg --dearmor --yes -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -22,7 +23,7 @@ chmod a+r /usr/share/keyrings/hashicorp-archive-keyring.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com trixie main" \
     > /etc/apt/sources.list.d/hashicorp.list
 
-# Depot Debian Backports : fournit des dependances requises par VirtualBox
+# Add Debian Backports repository: provides dependencies required by VirtualBox
 cat > /etc/apt/sources.list.d/trixie-backports.sources <<EOF
 Types: deb
 URIs: http://deb.debian.org/debian
@@ -31,7 +32,7 @@ Components: main contrib
 Signed-By: /usr/share/keyrings/debian-archive-keyring.pgp
 EOF
 
-# Depot Debian Fast Track : fournit le paquet VirtualBox lui-meme
+# Add Debian Fast Track repository: provides the VirtualBox package
 apt-get update
 apt-get install -y fasttrack-archive-keyring
 
@@ -45,15 +46,15 @@ EOF
 
 apt-get update
 
-#En-tetes du noyau + outils de compilation (DKMS compile les modules VirtualBox)
+# Install kernel headers and build tools (DKMS builds VirtualBox modules)
 apt-get install -y "linux-headers-$(uname -r)" || true
 apt-get install -y linux-headers-amd64 build-essential dkms
 
-#Installe Vagrant, puis VirtualBox
+# Install Vagrant, then VirtualBox
 apt-get install -y vagrant
 apt-get install -y virtualbox virtualbox-dkms
 
-#Desactive KVM pour laisser VT-x a VirtualBox (maintenant ET apres un reboot)
+# Disable KVM to let VirtualBox use VT-x (now and after reboot)
 cat > /etc/modprobe.d/blacklist-kvm.conf <<'EOF'
 blacklist kvm
 blacklist kvm_intel
@@ -62,7 +63,8 @@ EOF
 modprobe -r kvm_intel kvm_amd 2>/dev/null || true
 modprobe -r kvm              2>/dev/null || true
 
-#Charge les modules VirtualBox maintenant, et a chaque demarrage
+
+# Load VirtualBox modules now and at every boot
 cat > /etc/modules-load.d/virtualbox.conf <<'EOF'
 vboxdrv
 vboxnetadp
