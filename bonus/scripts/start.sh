@@ -64,5 +64,6 @@ kubectl wait --for=condition=ready --timeout=1200s pod -l app=webservice --names
 kubectl get secret gitlab-gitlab-initial-root-password \
   --namespace "$GITLAB_NAMESPACE" \
   --output=jsonpath="{.data.password}" | base64 -d > gitlab_password.txt
+sudo -v
 sudo KUBECONFIG="$HOME/.kube/config" kubectl port-forward svc/gitlab-webservice-default 80:8181 \
     --namespace "$GITLAB_NAMESPACE" 2>&1 >/dev/null &

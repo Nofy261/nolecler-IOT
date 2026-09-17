@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+GITLAB_PROJECT="${GITLAB_PROJECT:-root/test}"
 GITLAB_NAMESPACE="gitlab"
 GITLAB_PASSWORD="$(sudo KUBECONFIG="$HOME/.kube/config" kubectl get secret gitlab-gitlab-initial-root-password \
   --namespace "$GITLAB_NAMESPACE" \
@@ -14,7 +15,7 @@ sudo chmod 600 "$NETRC_FILE"
 if [ -d gitlab_repo ]; then
   git -C gitlab_repo pull
 else
-  git clone http://gitlab.k3d.gitlab.com/root/test.git gitlab_repo
+  git clone "http://gitlab.k3d.gitlab.com/$GITLAB_PROJECT.git" gitlab_repo
 fi
 
 git clone https://github.com/Nofy261/nolecler-IOT github_repo
@@ -33,7 +34,7 @@ git push
 popd >/dev/null
 
 argocd app create wil-playground2 \
-  --repo http://gitlab-webservice-default.gitlab.svc:8181/root/test.git \
+  --repo "http://gitlab-webservice-default.gitlab.svc:8181/$GITLAB_PROJECT.git" \
   --path confs \
   --dest-server https://kubernetes.default.svc \
   --dest-namespace dev \

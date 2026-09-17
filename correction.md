@@ -172,6 +172,9 @@ Voici le lien DockerHub public de l'image utilisée, wil42/playground, avec les 
 https://hub.docker.com/r/wil42/playground
 OU montrer cette commande mais optionnel:
 kubectl describe pod -n dev -l app=wil-playground | grep Image
+    OU  
+kubectl get pods -n dev -l app=wil-playground -o jsonpath='{.items[0].spec.containers[0].image}'; echo
+
 
 -Since you can see the v1 application, you must be able to update it with the help of the evaluated group...:
 Dans deployment.yaml changer l'image en v2 puis push sur github. L'app argocd attend quelques minutes le temps de faire la synchronisation puis devra etre a jour.
@@ -225,10 +228,21 @@ helm repo add enregistre le dépôt de charts. helm repo update rafraîchit le c
 
 On désactive la Gateway API pour cette installation, mais d'anciens CRD liés à cette fonctionnalité pourraient traîner d'une fois précédente où elle était activée — donc on les supprime d'abord, pour que le "désactivé maintenant" ne rentre pas en conflit avec un "activé avant" (ligne 57)
 
+On attend que le pod webservice soit prêt, on récupère le mot de passe root (généré automatiquement à l'installation de GitLab), on le décode et le stocke dans un fichier, puis on ouvre un tunnel pour s'y connecter depuis le local.   
 Kubernetes stocke les secrets encodés en base64 (pas chiffrés, juste encodés). base64 -d décode cette valeur pour retrouver le vrai mot de passe lisible.
 
-start.sh: installe réellement GitLab (via Helm), connecté aux 3 services préparés par install.sh (Valkey, CNPG, Garage). Il attend que GitLab soit prêt, récupère le mot de passe root, puis ouvre un tunnel (port 80 → 8181) pour y accéder depuis le navigateur.  
+start.sh: installe réellement GitLab (via Helm), connecté aux 3 services préparés par install.sh (Valkey, CNPG, Garage). Il attend que GitLab soit prêt, récupère le mot de passe root, puis ouvre un tunnel (port 80 → 8181) pour y accéder depuis le navigateur. 
 
+Bonus: 
+Le lancement de start.sh peut prendre quelques minutes : 
+-> commande pour voir l'avancee de creation des pods:
+--> watch kubectl get pods -n gitlab
+
+Ensuite tester le tunnel avec gitlab --> 
+curl -sI http://gitlab.k3d.gitlab.com/users/sign_in | head -1
+---> Reponse attendu ---> HTTP/1.1 200 OK
+
+Ouvrir http://gitlab.k3d.gitlab.com dans le navigateur, se connecter avec root + le mot de passe (cat gitlab_password.txt)
 ---
 
 update.sh:
@@ -237,6 +251,11 @@ On prépare des variables : le namespace, le mot de passe GitLab (récupéré en
 On écrit les identifiants dans le fichier standard .netrc, que Git lit automatiquement pour s'authentifier sans demander de mot de passe, puis on verrouille ce fichier pour protéger sa confidentialité.
 
 Si la copie locale du dépôt GitLab existe déjà, on la met à jour (pull) ; sinon, on la clone pour la première fois.
+
+
+On réutilise le clone GitHub fait plus tôt : il remplace le contenu de confs dans la copie locale GitLab par celui de GitHub, renomme l'app en wil-playground2, puis nettoie le dossier GitHub temporaire — il ne reste que la copie GitLab, prête à être commitée et poussée.
+
+argocd app create crée d'abord la fiche de surveillance (l'objet Application) — c'est ensuite, automatiquement, qu'Argo CD utilise cette fiche pour créer réellement le Deployment et le Pod. Les deux se passent vite l'un après l'autre, mais ce sont deux étapes distinctes.
 
 --------
 
@@ -254,6 +273,18 @@ et pareil pour l'app :
 pkill -f "port-forward.*8888:8888" 2>/dev/null || true
 kubectl port-forward svc/wil-playground -n dev 8888:8888 2>&1 >/dev/null &
 Pourquoi c'est la bonne approche : on ne "devine" pas si l'ancien tunnel marche encore bien — on le tue systématiquement et on en ouvre un garanti neuf, exactement le réflexe qu'on a pratiqué plusieurs fois à la main pendant tes révisions.
+
+------
+
+kubectl get pods -n argocd
+-> Les 3 essentiels à retenir (les autres sont secondaires) :
+argocd-server → le cœur, répond à nos commandes et à l'interface web    ---
+argocd-repo-server → va lire le dépôt Git   ---
+argocd-application-controller → compare l'état du cluster à Git et déclenche la synchro ---
+
+
+
+
 
 
 
