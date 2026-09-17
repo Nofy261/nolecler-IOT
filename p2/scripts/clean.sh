@@ -18,8 +18,6 @@ echo "=== P2 cleaning ==="
 
 vagrant destroy -f
 
-rm -rf .vagrant
-
 echo
 echo "=== Check of existing VM ==="
 
@@ -28,3 +26,5 @@ if vagrant status | grep -q "not created"; then
 else
 	echo -e "${RED}At least one VM still exists.${NC}"
 fi
+
+rm -rf .vagrant

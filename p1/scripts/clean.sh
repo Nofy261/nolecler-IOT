@@ -24,7 +24,7 @@ echo "=== Checking for remaining VMs ==="
 if vagrant status | grep -qE 'running|poweroff|saved|aborted'; then
     echo -e "${RED}At least one VM still exists.${NC}"
 else
-    echo -e "${GREEN}No VM exists anymore.${NC}"
+    echo -e "${GREEN}No VM in association with the project exists anymore.${NC}"
 fi
 
 rm -rf .vagrant
