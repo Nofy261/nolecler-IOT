@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+source "${SCRIPT_DIR}/config.sh"
+
 chmod +x "$0"
 
 # Restart the script as root if needed
@@ -75,4 +79,4 @@ modprobe vboxnetadp
 modprobe vboxnetflt
 
 echo
-echo "Installation done"
+echo -e "${GREEN}/nInstallation done.${NC}"
