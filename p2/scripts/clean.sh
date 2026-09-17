@@ -14,12 +14,11 @@ fi
 
 cd "$PROJECT_DIR" || exit 1
 
-echo "=== P2 cleaning ==="
+echo -e "${BLUE}\nCleaning P2 ...${NC}"
 
 vagrant destroy -f
 
-echo
-echo "=== Check of existing VM ==="
+echo -e "${BLUE}\nCheck of existing VM ...${NC}"
 
 if vagrant status | grep -q "not created"; then
     echo -e "${GREEN}No VM exists anymore.${NC}"
