@@ -18,7 +18,6 @@ echo "=== P1 cleaning ==="
 vagrant destroy -f
 
 rm -f token
-rm -rf .vagrant
 
 echo
 echo "=== Checking for remaining VMs ==="
@@ -27,3 +26,5 @@ if vagrant status | grep -qE 'running|poweroff|saved|aborted'; then
 else
     echo -e "${GREEN}No VM exists anymore.${NC}"
 fi
+
+rm -rf .vagrant
