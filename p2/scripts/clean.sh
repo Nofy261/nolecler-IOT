@@ -18,6 +18,8 @@ echo "=== P2 cleaning ==="
 
 vagrant destroy -f
 
+rm -rf .vagrant
+
 echo
 echo "=== Check of existing VM ==="
 

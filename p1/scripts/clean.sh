@@ -18,6 +18,7 @@ echo "=== P1 cleaning ==="
 vagrant destroy -f
 
 rm -f token
+rm -rf .vagrant
 
 echo
 echo "=== Checking for remaining VMs ==="
