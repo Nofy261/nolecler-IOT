@@ -1,5 +1,10 @@
 #!/bin/bash
+
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+source "${SCRIPT_DIR}/config.sh"
 
 GITLAB_PROJECT="${GITLAB_PROJECT:-root/test}"
 GITLAB_NAMESPACE="gitlab"
@@ -41,13 +46,21 @@ argocd app create wil-playground2 \
   --project default \
   --sync-policy automated
 
-echo "Attente que le deployment wil-playground2 existe..."
+echo -e "${BLUE}Wait for app deployment ...${NC}"
 while ! kubectl -n dev get deployment wil-playground2 &> /dev/null; do
   sleep 3
 done
 
-echo "Attente que le deployment wil-playground2 soit disponible..."
 kubectl wait --for=condition=available --timeout=120s deployment/wil-playground2 -n dev
 
-kubectl port-forward svc/wil-playground2 8889:8888 \
+echo -e "${BLUE}\nPort-forwarding to app ...${NC}"
+if nc -z localhost 8889; then
+	if lsof -iTCP:8889 | grep -q 'kubectl'; then
+			echo -e "${GREEN}\nApp port-forward is already running.${NC}"
+	else
+		echo -e "${RED}\nPort 8889 is already used by another process.${NC}"
+		exit 1
+	fi
+else
+  kubectl port-forward svc/wil-playground2 8889:8888 \
   --namespace dev 2>&1 >/dev/null &

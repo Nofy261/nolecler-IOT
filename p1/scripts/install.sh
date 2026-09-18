@@ -78,5 +78,4 @@ modprobe vboxdrv
 modprobe vboxnetadp
 modprobe vboxnetflt
 
-echo
 echo -e "${GREEN}/nInstallation done.${NC}"

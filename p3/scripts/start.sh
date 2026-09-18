@@ -81,12 +81,11 @@ argocd app create wil-playground \
   --project default \
   --sync-policy automated
 
-echo -e "\nWaiting for wil-playground deployment to exist...\n"
+echo -e "\nWaiting for app deployment...\n"
 while ! kubectl -n dev get deployment wil-playground &> /dev/null; do
   sleep 3
 done
 
-echo -e "\nWaiting for wil-playground deployment...\n"
 kubectl wait --for=condition=available --timeout=120s deployment/wil-playground -n dev
 
 echo -e "${BLUE}\nPort-forwarding to the app ...${NC}"

@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+source "${SCRIPT_DIR}/config.sh"
+
 BONUS_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 GATEWAY_CRDS=(
@@ -19,7 +23,7 @@ GATEWAY_CRDS=(
   xmeshes.gateway.networking.x-k8s.io
 )
 
-echo -e "\n\e[33mCleaning up pre-existing Gateway API CRDs to avoid Helm conflicts\e[0m"
+echo -e "${BLUE}\nCleaning up pre-existing Gateway API CRDs to avoid Helm conflicts ...${NC}"
 for crd in "${GATEWAY_CRDS[@]}"; do
   kubectl delete crd "$crd" --ignore-not-found=true
 done
@@ -29,20 +33,20 @@ HOSTS_FILE="/etc/hosts"
 GITLAB_NAMESPACE="gitlab"
 
 if grep -Fq -- "$HOST_ENTRY" "$HOSTS_FILE"; then
-  echo "$HOSTS_FILE already contains the GitLab host"
+  echo -e "${GREEN}$HOSTS_FILE already contains the GitLab host.${NC}"
 else
-  echo "Adding the GitLab host to $HOSTS_FILE"
+  echo -e "${BLUE}Adding the GitLab host to $HOSTS_FILE ...${NC}"
   printf '%s\n' "$HOST_ENTRY" | sudo tee -a "$HOSTS_FILE"
 fi
 
 if kubectl get namespace "$GITLAB_NAMESPACE" >/dev/null 2>&1; then
-    echo "Namespace $GITLAB_NAMESPACE already exists"
+    echo -e "${GREEN}\nNamespace $GITLAB_NAMESPACE already exists.${NC}"
 else
-  echo -e "\n\e[32;1mCreation of $GITLAB_NAMESPACE namespace\e[0m\n"
+  echo -e "${BLUE}\nCreation of $GITLAB_NAMESPACE namespace ...${NC}"
   kubectl create namespace "$GITLAB_NAMESPACE"
 fi
 
-echo -e "\n\e[32;1mInstallation de GitLab via Helm dans le namespace $GITLAB_NAMESPACE\e[0m\n"
+echo -e "${BLUE}\nInstalling GitLab via Helm in namespace $GITLAB_NAMESPACE ...${NC}"
 helm repo add gitlab https://charts.gitlab.io/
 helm repo update
 
@@ -58,12 +62,23 @@ helm upgrade --install gitlab gitlab/gitlab \
   --set global.gatewayApi.configureCertmanager=false \
   --timeout 600s
 
-echo -e "\n\e[33mAttente que les pods GitLab soient prêts\e[0m"
+echo -e "${BLUE}\nWaiting for GitLab podsready ...${NC}"
 kubectl wait --for=condition=ready --timeout=1200s pod -l app=webservice --namespace "$GITLAB_NAMESPACE"
 
 kubectl get secret gitlab-gitlab-initial-root-password \
   --namespace "$GITLAB_NAMESPACE" \
   --output=jsonpath="{.data.password}" | base64 -d > gitlab_password.txt
 sudo -v
-sudo KUBECONFIG="$HOME/.kube/config" kubectl port-forward svc/gitlab-webservice-default 80:8181 \
-    --namespace "$GITLAB_NAMESPACE" 2>&1 >/dev/null &
+
+echo -e "${BLUE}\nPort-forwarding to GitLab ...${NC}"
+if nc -z localhost 80; then
+	if lsof -iTCP:80 | grep -q 'kubectl'; then
+			echo -e "${GREEN}\nGitLab port-forward is already running.${NC}"
+	else
+		echo -e "${RED}\nPort 80 is already used by another process.${NC}"
+		exit 1
+	fi
+else
+  sudo KUBECONFIG="$HOME/.kube/config" kubectl port-forward svc/gitlab-webservice-default 80:8181 \
+  --namespace "$GITLAB_NAMESPACE" 2>&1 >/dev/null &
+fi
