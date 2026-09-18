@@ -39,6 +39,8 @@ vagrant up                     # crée les 2 VM et installe K3s
 **Vérification :**
 ```bash
 vagrant ssh loginS
+```
+```BASH
 kubectl get nodes -o wide      # doit afficher 2 nœuds Ready
 ```
 
