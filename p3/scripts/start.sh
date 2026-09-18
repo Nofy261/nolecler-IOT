@@ -71,11 +71,11 @@ echo -e "\nLogging into Argo CD\n"
 argocd login localhost:8080 --username admin --password "$ARGOCD_PASS" --insecure
 
 sleep 1
-argocd repo add https://github.com/Nofy261/nolecler-IOT
+argocd repo add https://github.com/Nofy261/iot_nolecler
 sleep 1
 argocd app create wil-playground \
-  --repo https://github.com/Nofy261/nolecler-IOT \
-  --path p3/confs \
+  --repo https://github.com/Nofy261/iot_nolecler \
+  --path . \
   --dest-server https://kubernetes.default.svc \
   --dest-namespace dev \
   --project default \

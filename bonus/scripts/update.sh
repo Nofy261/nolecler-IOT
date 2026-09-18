@@ -6,64 +6,15 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 source "${SCRIPT_DIR}/config.sh"
 
-GITLAB_PROJECT="${GITLAB_PROJECT:-root/test}"
-GITLAB_NAMESPACE="gitlab"
-GITLAB_PASSWORD="$(sudo KUBECONFIG="$HOME/.kube/config" kubectl get secret gitlab-gitlab-initial-root-password \
-  --namespace "$GITLAB_NAMESPACE" \
-  --output=jsonpath="{.data.password}" | base64 -d)"
-NETRC_FILE="$HOME/.netrc"
-
-printf 'machine gitlab.k3d.gitlab.com\nlogin root\npassword %s\n' \
-  "$GITLAB_PASSWORD" > "$NETRC_FILE"
-sudo chmod 600 "$NETRC_FILE"
-
-if [ -d gitlab_repo ]; then
-  git -C gitlab_repo pull
-else
-  git clone "http://gitlab.k3d.gitlab.com/$GITLAB_PROJECT.git" gitlab_repo
-fi
-
-#git clone https://github.com/Nofy261/nolecler-IOT github_repo
-#rm -rf gitlab_repo/confs
-#mv github_repo/p3/confs gitlab_repo/confs
-#sed -i 's/wil-playground/wil-playground2/g' gitlab_repo/confs/*.yaml
-#rm -rf github_repo/
-
-rm -rf gitlab_repo/confs
-cp -r "$SCRIPT_DIR/../../p3/confs" gitlab_repo/confs
-sed -i 's/wil-playground/wil-playground2/g' gitlab_repo/confs/*.yaml
-
 pushd gitlab_repo >/dev/null
-git config user.email "root@root.com"
-git config user.name "root"
 git add .
-git commit -m "update the repo" || echo "no changes to push"
+git commit -m "update the repo" || echo -e "${GREEN}No changes to push.${NC}"
 git push
 popd >/dev/null
 
-argocd app create wil-playground2 \
-  --repo "http://gitlab-webservice-default.gitlab.svc:8181/$GITLAB_PROJECT.git" \
-  --path confs \
-  --dest-server https://kubernetes.default.svc \
-  --dest-namespace dev \
-  --project default \
-  --sync-policy automated
+argocd app sync wil-playground2
 
-echo -e "${BLUE}Wait for app deployment ...${NC}"
-while ! kubectl -n dev get deployment wil-playground2 &> /dev/null; do
-  sleep 3
-done
-
-kubectl wait --for=condition=available --timeout=120s deployment/wil-playground2 -n dev
-
-echo -e "${BLUE}\nPort-forwarding to app ...${NC}"
-if nc -z localhost 8889; then
-	if lsof -iTCP:8889 | grep -q 'kubectl'; then
-			echo -e "${GREEN}\nApp port-forward is already running.${NC}"
-	else
-		echo -e "${RED}\nPort 8889 is already used by another process.${NC}"
-		exit 1
-	fi
-else
-  kubectl port-forward svc/wil-playground2 8889:8888 \
-  --namespace dev 2>&1 >/dev/null &
+echo -e "${BLUE}\nInit new connection to app ...${NC}"
+pkill -f "port-forward.*8889" || true
+kubectl port-forward svc/wil-playground2 -n dev 8889:8888 &
+sleep 2

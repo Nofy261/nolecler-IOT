@@ -51,8 +51,7 @@ Crée les 2 VM et installe K3s (server puis agent) via les scripts de provisioni
 ```bash
 vagrant ssh loginS
 ```
-```BASH
-```
+
 Se connecte à la VM server (remplacer par `loginSW` pour le worker).
 
 **Vérifier l'IP privée (dans la VM) :**
