@@ -302,9 +302,7 @@ argocd-application-controller → compare l'état du cluster à Git et déclench
 
 
 
-rm -rf gitlab_repo/confs
-cp -r "$BONUS_DIR/../p3/confs" gitlab_repo/confs
-sed -i 's/wil-playground/wil-playground2/g' gitlab_repo/confs/*.yaml
+
 
 
 

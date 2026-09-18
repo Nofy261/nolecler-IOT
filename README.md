@@ -105,7 +105,7 @@ bash scripts/clean.sh
 
 ### Bonus — GitLab local
 
-GitLab est installé dans le cluster (namespace `gitlab`), connecté à 3 services externes légers (Valkey, CloudNativePG, Garage) au lieu de ses composants internes lourds. Il remplace GitHub comme source surveillée par Argo CD, via une deuxième application (`wil-playground2`).
+GitLab est installé dans le cluster (namespace `gitlab`), connecté à 3 services externes légers (Valkey, CloudNativePG, Garage) au lieu de ses composants internes lourds. Il remplace GitHub comme source surveillée par Argo CD (`update.sh` copie directement les manifests de `p3/confs`, en local, sans passer par GitHub), via une deuxième application (`wil-playground2`).
 
 **Lancement :**
 ```bash
@@ -114,12 +114,12 @@ sudo bash scripts/install.sh   # installe Helm, Valkey, CloudNativePG, Garage
 bash scripts/start.sh          # installe GitLab, ouvre le tunnel (port 80)
 ```
 
-**Créer le dépôt GitLab (obligatoire avant `update.sh`) :**
+**Créer le dépôt GitLab :**
 1. Récupérer le mot de passe : `cat gitlab_password.txt`
 2. Ouvrir `http://gitlab.k3d.gitlab.com`, se connecter en `root`
 3. Créer un projet vierge nommé `test`, namespace `root`, visibilité **Public**
 
-**Synchroniser GitHub → GitLab :**
+**Copier les manifests de p3 vers GitLab (en local) :**
 ```bash
 bash scripts/update.sh
 ```

@@ -23,12 +23,15 @@ else
   git clone "http://gitlab.k3d.gitlab.com/$GITLAB_PROJECT.git" gitlab_repo
 fi
 
-git clone https://github.com/Nofy261/nolecler-IOT github_repo
+#git clone https://github.com/Nofy261/nolecler-IOT github_repo
+#rm -rf gitlab_repo/confs
+#mv github_repo/p3/confs gitlab_repo/confs
+#sed -i 's/wil-playground/wil-playground2/g' gitlab_repo/confs/*.yaml
+#rm -rf github_repo/
 
 rm -rf gitlab_repo/confs
-mv github_repo/p3/confs gitlab_repo/confs
+cp -r "$SCRIPT_DIR/../../p3/confs" gitlab_repo/confs
 sed -i 's/wil-playground/wil-playground2/g' gitlab_repo/confs/*.yaml
-rm -rf github_repo/
 
 pushd gitlab_repo >/dev/null
 git config user.email "root@root.com"
