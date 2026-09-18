@@ -257,6 +257,21 @@ On réutilise le clone GitHub fait plus tôt : il remplace le contenu de confs d
 
 argocd app create crée d'abord la fiche de surveillance (l'objet Application) — c'est ensuite, automatiquement, qu'Argo CD utilise cette fiche pour créer réellement le Deployment et le Pod. Les deux se passent vite l'un après l'autre, mais ce sont deux étapes distinctes.
 
+Commande pour tester la deuxieme appli de Wil2: 
+curl http://localhost:8889/
+
+argocd app get wil-playground2  -----
+kubectl get pods -n dev
+
+A faire avant de tester si le passage de v1 a v2 a reussi 
+pkill -f "port-forward.*8889"
+kubectl port-forward svc/wil-playground2 -n dev 8889:8888 &
+sleep 2
+curl http://localhost:8889/
+
+GITLAB_PROJECT=root/test0 ./scripts/update.sh
+
+
 --------
 
 
@@ -287,7 +302,9 @@ argocd-application-controller → compare l'état du cluster à Git et déclench
 
 
 
-
+rm -rf gitlab_repo/confs
+cp -r "$BONUS_DIR/../p3/confs" gitlab_repo/confs
+sed -i 's/wil-playground/wil-playground2/g' gitlab_repo/confs/*.yaml
 
 
 
