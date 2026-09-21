@@ -208,6 +208,16 @@ sleep 2
 curl http://localhost:8888/
 ```
 
+**Verifier les port-forward**
+```bash
+ps aux | grep "port-forward" | grep -v grep
+```
+
+**Docker Hub de l'image utilise**
+```bash
+https://hub.docker.com/r/wil42/playground
+```
+
 **Nettoyage :**
 ```bash
 bash scripts/clean.sh

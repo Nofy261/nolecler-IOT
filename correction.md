@@ -150,7 +150,10 @@ argocd-application-controller : c'est le seul qui apparaît comme un StatefulSet
 (Le mot de passe admin initial est stocké dans le secret Kubernetes argocd-initial-admin-secret, encodé en base64. Onle récupère avec kubectl get secret puis on le décode)
 
 -Check that a Docker image is used in the Github repository...:
-Dans deplyment.yaml -> image 
+
+https://hub.docker.com/r/wil42/playground 
+
+Dans deployment.yaml -> image 
 On utilise l'image pré-faite de Wil, wil42/playground, disponible publiquement sur DockerHub avec les tags v1 et v2 déjà fournis.
 
 Partie 3 - Usage
