@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 source "${SCRIPT_DIR}/config.sh"
 
-GITLAB_PROJECT="${GITLAB_PROJECT:-root/test22}"
+GITLAB_PROJECT="${GITLAB_PROJECT:-root/new_test}"
 GITLAB_NAMESPACE="gitlab"
 GITLAB_PASSWORD="$(sudo KUBECONFIG="$HOME/.kube/config" kubectl get secret gitlab-gitlab-initial-root-password \
   --namespace "$GITLAB_NAMESPACE" \

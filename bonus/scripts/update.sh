@@ -16,5 +16,6 @@ argocd app sync wil-playground2
 
 echo -e "${BLUE}\nInit new connection to app ...${NC}"
 pkill -f "port-forward.*8889" || true
+sleep 2
 kubectl port-forward svc/wil-playground2 -n dev 8889:8888 &
 sleep 2
