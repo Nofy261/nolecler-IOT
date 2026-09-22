@@ -192,12 +192,8 @@ argocd app get wil-playground
 ```
 
 **Passer de v1 à v2 :**
-Modifier le deployement.yaml , image v1 en v2.
-Push sur github.
-si nécessaire :
-```BASH
-git push -u origin main --force
-```
+Modifier le `deployment.yaml`, image v1 en v2.
+Push sur GitHub.
 Retester : 
 ```bash
 curl http://localhost:8888/
@@ -209,23 +205,16 @@ Doit renvoyer `{"status":"ok", "message": "v2"}`.
 argocd app sync wil-playground
 ```
 
-**Si le tunnel casse après un changement de version :**
-```bash
-pkill -f "port-forward.*8888"
-kubectl port-forward svc/wil-playground -n dev 8888:8888 &
-sleep 2
-curl http://localhost:8888/
-```
+L'appli est exposée via un **Service de type LoadBalancer** : le port `8888` est mappé directement au cluster K3d
+(`k3d cluster create iot -p "8888:8888@loadbalancer"`). Seul Argo CD (port `8080`)
+utilise encore un port-forward classique.
 
-**Verifier les port-forward**
+**Vérifier le port-forward d'Argo CD :**
 ```bash
 ps aux | grep "port-forward" | grep -v grep
 ```
 
-**Docker Hub de l'image utilise**
-```bash
-https://hub.docker.com/r/wil42/playground
-```
+**Docker Hub de l'image utilisée :** https://hub.docker.com/r/wil42/playground
 
 **Nettoyage :**
 ```bash
@@ -269,16 +258,21 @@ curl -sI http://gitlab.k3d.gitlab.com/users/sign_in | head -1
 ```
 Doit renvoyer `200 OK`.
 
-**Créer le dépôt (obligatoire avant `update.sh`) :**
+**Créer le dépôt (obligatoire avant `init.sh`) :**
 1. Ouvrir `http://gitlab.k3d.gitlab.com`, se connecter en `root`
 2. `+` → New project/repository → Create blank project
-3. Namespace `root`, nom `test`, README décoché, visibilité **Public**
+3. Namespace `root`, nom `new_test` (valeur par défaut de `init.sh`), README décoché, visibilité **Public**
 
-**Copier les manifests de p3 vers GitLab :**
+**Connecter l'appli à ce dépôt (première fois) :**
 ```bash
-bash scripts/update.sh
+bash scripts/init.sh
 ```
-(Optionnel : `GITLAB_PROJECT=root/monnom bash scripts/update.sh` pour utiliser un autre nom de dépôt)
+(Optionnel : `GITLAB_PROJECT=root/monnom bash scripts/init.sh` pour utiliser un autre nom de dépôt)
+
+Clone le dépôt vide, y copie les manifests de `p3/confs` (renommés en `wil-playground2`
+pour ne pas entrer en conflit avec l'app de p3), les push sur GitLab, crée l'app Argo CD
+`wil-playground2` connectée à ce dépôt, puis expose l'appli sur le port `8889`
+(port-forward classique, pas de LoadBalancer ici pour ne pas devoir recréer le cluster).
 
 **Vérifier que l'app répond :**
 ```bash
@@ -286,7 +280,15 @@ curl http://localhost:8889/
 ```
 Doit renvoyer `{"status":"ok", "message": "v1"}`.
 
-**Passer de v1 à v2 :** directement dans l'interface GitLab — ouvrir `confs/deployment.yaml`, Edit, changer le tag, Commit changes. Ne pas relancer `update.sh` (il recopierait la version locale de p3, restée en v1).
+**Passer de v1 à v2 :** directement dans l'interface GitLab — ouvrir `confs/deployment.yaml`, Edit, changer le tag, Commit changes.
+
+**Mettre à jour après une modification locale (dans `gitlab_repo/`) :**
+```bash
+bash scripts/update.sh
+```
+Push les changements locaux vers GitLab et force la synchro Argo CD. À utiliser
+seulement pour des changements faits **après** `init.sh` — pas juste après avoir
+créé le dépôt, sinon ça repousserait la version locale de p3 (restée en v1).
 
 **Vérifier la synchronisation :**
 ```bash
