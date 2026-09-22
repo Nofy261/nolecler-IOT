@@ -5,9 +5,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 source "${SCRIPT_DIR}/config.sh"
 
-GITLAB_DIR="${SCRIPT_DIR}/gitlab"
-GITLAB_REPO_DIR="${SCRIPT_DIR}/gitlab_repo"
-GITLAB_PASSWORD_FILE="${SCRIPT_DIR}/gitlab_password.txt"
+BONUS_DIR="$(dirname "$SCRIPT_DIR")"
+
+GITLAB_DIR="${BONUS_DIR}/gitlab"
+GITLAB_REPO_DIR="${BONUS_DIR}/gitlab_repo"
+GITLAB_PASSWORD_FILE="${BONUS_DIR}/gitlab_password.txt"
+EXTERNAL_CHARTS_DIR="${BONUS_DIR}/.external-charts"
 NETRC_FILE="$HOME/.netrc"
 
 HOST_ENTRY="127.0.0.1 gitlab.k3d.gitlab.com"
@@ -67,6 +70,15 @@ if [ -d "$GITLAB_DIR" ]; then
     echo -e "${GREEN}$GITLAB_DIR removed.${NC}"
 else
     echo -e "${GREEN}No GitLab chart repository found.${NC}"
+fi
+
+# Remove cached external Helm chart dependencies
+echo -e "${BLUE}\nRemoving external charts cache ...${NC}"
+if [ -d "$EXTERNAL_CHARTS_DIR" ]; then
+    rm -rf "$EXTERNAL_CHARTS_DIR"
+    echo -e "${GREEN}$EXTERNAL_CHARTS_DIR removed.${NC}"
+else
+    echo -e "${GREEN}No external charts cache found.${NC}"
 fi
 
 # Remove GitLab hostname from /etc/hosts
