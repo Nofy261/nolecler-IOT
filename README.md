@@ -47,6 +47,11 @@ vagrant up
 ```
 Crée les 2 VM et installe K3s (server puis agent) via les scripts de provisioning.
 
+**Vérifier le status des VM du projet courant :**
+```BASH
+vagrant status
+```
+
 **Se connecter en SSH :**
 ```bash
 vagrant ssh loginS
@@ -189,6 +194,10 @@ argocd app get wil-playground
 **Passer de v1 à v2 :**
 Modifier le deployement.yaml , image v1 en v2.
 Push sur github.
+si nécessaire :
+```BASH
+git push -u origin main --force
+```
 Retester : 
 ```bash
 curl http://localhost:8888/
